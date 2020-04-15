@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Public Pipes</title>
+    <link rel="stylesheet" href="/css/font-awesome-core.css?v=1">
+    <link rel="stylesheet" href="/css/font-awesome-solid.css?v=1">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/grids-responsive-min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
+    <script>vex.defaultOptions.className = 'vex-theme-wireframe'</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-wireframe.css" />
+    <script src="<%= url '/publicpipes.js' %>"></script>
+    <link href="<%= url 'style.css' %>" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <%= erb :nav, :locals => {:current => 'publicpipes'} %>
+    
+    <main id="pipes" class="public pure-g">
+        <div class="pure-u-1 pure-u-md-1-5"> </div>
+        <div class="pure-u-3 pure-u-md-3-5">
+            <form id="tagsearch" method="GET" action="<%= url '/pipes' %>" >
+                <input type="text" list="tags" name="tag" placeholder="tag" value="<%= tag %>" />
+                <button type="submit" class="pure-button"><i class="fas fa-search"></i> Go</button>
+            </form>
+            <aside class="pagination">
+                <% if pipes.length > 11 %>
+                    <% for i in 0..((pipes.length - 1)/ 12).ceil %>
+                        <a href="<%= url '/pipes?page=' + i.to_s %><%= '&tag=' + tag unless tag.nil? %>" <%= 'class="current"' if page.to_s == i.to_s %>><%= i %></a>
+                    <% end %>
+                <% end %>
+            </aside>
+            <% if pipes.length > 0 %>
+                <ol>
+                <% pipes[(page.to_i * 12)...((page.to_i + 1) * 12)].each do |pipe| %>
+                    <li>
+                        <dl id="<%= encodeid(pipe['id']) %>" <%= 'class="own_pipe"' if pipe['user'].to_s == userEmailToId(authorized_email).to_s %> >
+                            <dt>Title</dt>
+                            <dd><span class="likes"><i class="likesymbol <%= likedpipes&.find{|x| x['pipe'] == pipe['id'] } ? 'liked fas fa-heart filled' : 'fas fa-heart' %>"></i> <%= pipe['likes'] %></span> <span class="title"><%= pipe['title'] %></span></dd>
+                            <dt>Preview</dt>
+                            <dd><a href="<%= url '/pipe/' + encodeid(pipe['id']) %>"><svg class="preview"><g transform="scale(0.2)"><%= pipe['preview'] %></g></svg></a></dd>
+                            <dt>Description</dt>
+                            <dd class="description"><%= pipe['description'].length > 140 ? (pipe['description'][0..140] + '...') : pipe['description'] %></dd>
+                            <dt>Tags</dt>
+                            <dd class="tags">
+                                <% pipe['tags']&.split(',')&.each do |tag| %>
+                                    <a href="<%= url '/pipes?tag=' + tag %>"><span class="tag"><%= tag %></span></a>
+                                <% end %>
+                            </dd>
+                        </dl>
+                    </li>
+                <% end %>
+                </ol>
+            <% else %>
+                No public pipes found
+            <% end %>
+            <aside class="pagination">
+                <% if pipes.length > 11 %>
+                    <% for i in 0..((pipes.length - 1) / 12).ceil %>
+                        <a href="<%= url '/pipes?page=' + i.to_s %><%= '&tag=' + tag unless tag.nil? %>" <%= 'class="current"' if page.to_s == i.to_s %>><%= i %></a>
+                    <% end %>
+                <% end %>
+            </aside>
+        </div>
+        <div class="pure-u-1 pure-u-md-1-5"> </div>
+    </main>
+</body>
+</html>

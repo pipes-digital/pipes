@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Get and manipulate data with a visual programming interface.">
+    <title>Pipes</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/grids-responsive-min.css">
+    
+    <link rel="stylesheet" href="/css/font-awesome-core.css?v=1">
+    <link rel="stylesheet" href="/css/font-awesome-regular.css?v=1">
+
+    <link rel="stylesheet" href="/style.css">
+    <script type="text/javascript" async defer src="/wa-mediabox.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/wa-mediabox.min.css" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="theme-color" content="#ffffff">
+<body>
+
+<header>
+    <%= erb :nav, :locals => {:current => 'index'} %>
+</header>
+
+<main class="splash-container">
+    <div class="splash">
+        <h1 class="splash-head">pipes.digital CE</h1>
+        <p class="splash-subhead">
+            Get and manipulate data from the open web by connecting blocks
+        </p>
+        <p>
+            <a href="/editor" class="pure-button pure-button-primary">Get Started</a>
+        </p>
+    </div>
+    <i id="scrollSignal" class="far fa-arrow-down" aria-hidden="true"></i>
+</main>
+
+<section class="content-wrapper">
+    <div class="content">
+        <h2 class="content-head is-center">A local way to work with data.</h2>
+
+        <div class="pure-g arguments">
+            <div class="l-box pure-u-1 pure-u-md-2-2 pure-u-lg-4-4">
+
+                <h3 class="content-subhead">
+                    The Open Source Edition
+                </h3>
+                <p>
+                    This is the free Community Edition of pipes.digital. Find more information at <a href="https://github.com/pipes-digital/pipes">its Github-Repository</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<nav class="main-menu pure-menu pure-menu-horizontal <%= 'pure-menu-fixed home-menu' if current == 'index' %>">
+    <a class="pure-menu-heading" href="/">Pipes CE</a>
+
+    <ul class="pure-menu-list">
+        <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'mypipes' %>"><a href="/mypipes" class="pure-menu-link">Home</a></li>
+        <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'editor' %>"><a href="/editor" class="pure-menu-link">Editor</a></li>
+        <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'docs' %>"><a href="https://www.pipes.digital/docs" class="pure-menu-link">Docs</a></li>
+        <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'publicpipes' %>"><a href="/pipes" class="pure-menu-link">Shared Pipes</a></li>
+        <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'blog' %>"><a href="https://pipes.digital/blog" class="pure-menu-link">Blog</a></li>
+        <% if authorized? %>
+            <li class="pure-menu-item profile-menu-item pure-menu-has-children pure-menu-allow-hover"><img src="<%= gravatar() %>"/>
+                <ul class="pure-menu-children">
+                    <li class="pure-menu-item <%= 'pure-menu-selected' if current == 'settings' %>"><a href="/settings" class="pure-menu-link">Settings</a></li>
+                    <li class="pure-menu-item"><form method="POST" action="/logout" class="pure-menu-link pure-menu-form"><button type="submit">Logout</button></form></li>
+                </ul>
+            </li>
+        <% else %> 
+            <li class="pure-menu-item %= 'pure-menu-selected' if current == 'login' %>"><a <% if current != 'login' %>href="<%= (current == 'index') ? '/mainlogin' : '/login' %>" <% end %> class="pure-menu-link" id="loginlink">Sign in</a></li>
+        <% end %>
+    </ul>
+</nav>

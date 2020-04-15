@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Rendered Feed Preview">
+    <title>Pipes Feed Preview: <%= feed.title&.to_s %> </title>
+
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="robots" content="none" />
+
+    <link rel="alternate" type="application/rss+xml" href="https://pipes.digital/feed/<%= hashed_id %><%= paramsToArgs(params: params) %>" />
+    <style>
+        #pipe_feedlist {
+            counter-reset: li;
+            list-style-type: none;
+        }
+        .pipe_feeditem {
+            max-width: 800px;
+            display: block;
+            clear: both;
+        }
+        .pipe_feeditem:before{
+            content: counter(li);
+            counter-increment: li;
+            position: relative;
+            font-weight: bold;
+            color: #c2cad2;
+            align-self: center;
+            right: 2.3rem;
+            top: 4rem;
+            font-size: 2rem;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+<body>
+    <%= erb :nav, :locals => {:current => 'none'} %>
+    <div id="feedpreview">
+        <h1>Pipes Feed Preview: <%= feed.title&.to_s %></h1>
+        <a href="/feed/<%= hashed_id %><%= paramsToArgs(params: params) %>"><button>Access Raw Feed</button></a>
+
+        <ol id="pipe_feedlist">
+        <% feed.items.each do |item| %>
+            <li class="pipe_feeditem"><section>
+                <header><h2><a href="<%= item.url&.to_s %>"><%= item.title&.to_s %></a></h2>
+                <% if item.updated %>
+                    <h3><%= item.updated&.to_s %></h3>
+                <% else %>
+                    <h3><%= item.published&.to_s %></h3>
+                <% end %>
+                </header>
+                <div>
+                    <div>
+                        <%= item.summary&.to_s %>
+                    </div>
+                    <div>
+                        <%= h item.content&.to_s if item.content&.gsub(/\s+/, "")&.to_s != item.summary&.gsub(/\s+/, "")&.to_s %>
+                    </div>
+                </div>
+            </section></li>
+        <% end %>
+        </ol>
+    </div>
+</body>
+</html>
