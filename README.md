@@ -11,7 +11,7 @@ To get an impression of how pipes works without installing anything, try [pipes.
 
 ## How to install and run
 
-Fork this repository. You need to install Ruby and the bundler gem:
+Clone this repository. You need to install Ruby and the bundler gem:
 
     gem install bundler
 
