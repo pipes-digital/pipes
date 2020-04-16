@@ -15,7 +15,7 @@ Clone this repository. You need to install Ruby and the bundler gem:
 
     gem install bundler
 
-Then cd into the forked repository and download the required gems with bundler:
+Then cd into the cloned repository and download the required gems with bundler:
 
     bundle install
 
