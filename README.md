@@ -38,8 +38,12 @@ The Twitter block accesses the official Twitter API, the documentation to get st
 
 Pipes CE uses [portier](https://portier.github.io/) to provide an easy passwordless login. After the installation you can immediately login with every email address you control.
 
-## Contributions
+## Development
 
-The code is dual licensed: It's AGPL, but provides the exception of not having to share code run to pipes.digital, the founding project (this so far only touches stuff like the pricing page, as explained above).
+[This blog article](https://www.pipes.digital/blog/8/The%20Architecture%20and%20Software%20behind%20Pipes) explains the architecture and most of the software used. It is a good starting point if you want to make changes.
+
+The code is dual licensed: AGPL, but with the exception of not having to share code run to pipes.digital, the founding project (this so far only touches stuff like the pricing page, as explained above).
 
 Feature and Pull Requests are welcome. If in doubt open an issue before investing the work to discuss deeper changes, though those are also welcome.
+
+You can also join [the gitter channel](https://gitter.im/pipes-digital/community).
