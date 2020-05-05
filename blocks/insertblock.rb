@@ -10,6 +10,7 @@ class Insertblock < Block
         end
         feed = inputs[1]
         target = self.options[:userinputs][0] if self.options[:userinputs]
+        replacementMode = self.options[:userinputs][1] if self.options[:userinputs]
 
         if ! target || target.empty?
             return '<rss version="2.0"><channel><title>No target</title><link></link><description>Please provide an xpath telling this block where to insert the element.</description></channel></rss>'
@@ -21,7 +22,11 @@ class Insertblock < Block
 
         feed = Nokogiri::XML(feed)
         feed.xpath(target).each do |node|
-            node << insertElements.items.first.content
+            if replacementMode
+                node.content = insertElements.items.first.content
+            else
+                node << insertElements.items.first.content
+            end
         end
         
         return feed.to_s

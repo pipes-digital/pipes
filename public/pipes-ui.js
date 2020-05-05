@@ -921,11 +921,23 @@ function UniqueBlock(x, y) {
 }
 
 function InsertBlock(x, y) {
-    Block.call(this, 2, 1, x, y, 'Insert', 150, 100);
+    Block.call(this, 2, 1, x, y, 'Insert', 150, 125);
     this.userinputs[0].placeholder = 'xpath';
-    this.deco.push(r.path('M' + x + ',' + (y + 80) + 'H' + (x + 140) + 'V' + (y + 50) + 'H' + (x + 150) )); 
+    this.deco.push(r.path('M' + x + ',' + (y + 80) + 'H' + (x + 140) + 'V' + (y + 60) + 'H' + (x + 150) )); 
     this.deco.push(r.path('M' + x + ',' + (y + 15) + 'H' + (x + 75) + 'V' + (y + 80))); 
-    this.deco.push(r.path('M' + (x + 70) + ',' + (y + 75) + 'L' + (x + 75) + ',' + (y + 80) + 'L' + (x + 80) + ',' + (y + 75) )); 
+    this.deco.push(r.path('M' + (x + 70) + ',' + (y + 75) + 'L' + (x + 75) + ',' + (y + 80) + 'L' + (x + 80) + ',' + (y + 75) ));
+
+    var userinput = document.createElement('input');
+    userinput.type = 'checkbox';
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 20);
+    userinput.setAttribute('data-yoffset', 95);
+    userinput.style.left = x + 20 + 'px';
+    userinput.style.top = y + 95 + 'px';
+    userinput.name = 'block';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+    this.deco.push(r.text(x + 40, y + 102, 'Replace content' ).attr({'text-anchor': 'start'}))
 }
 
 function TruncateBlock(x, y) {
