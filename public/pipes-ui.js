@@ -469,6 +469,10 @@ function Block(inputAmount, outputAmount, x, y, name, width, height) {
         });
         this.title.remove();
         blocks.splice(blocks.indexOf(this), 1);
+        // We also need to close the inspector if it happens to be open
+        if (viewer.dataset.controller == this.id) {
+            viewer.style.display = 'none';
+        }
     };
     
     var start = function () {
