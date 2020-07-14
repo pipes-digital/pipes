@@ -1,5 +1,4 @@
-require 'open-uri'
-require 'open_uri_redirections'
+require 'httparty'
 require 'lru_redux'
 
 # Download and cache downloads. Limit requests to the same domain to not spam it
@@ -17,10 +16,9 @@ class Downloader
     def get(url, js = false)
         url = URI.parse(URI.escape(url))
         result, date = Database.instance.getCache(key: 'url_' + url.to_s + '_' + js.to_s)
-        
         if date.nil? || (date + 600) < Time.now.to_i
             while (@@limiter.key?(url.host))
-                sleep(1)
+                sleep(2)
             end
             @@limiter[url.host] = 1
 
@@ -31,13 +29,24 @@ class Downloader
                 session.driver.browser.close
             else
                 begin
-                    result = open(url, :allow_redirections => :all).read
-                rescue OpenURI::HTTPError => ohe
+                    response = HTTParty.get(url)
+                    if response.code == 429
+                        if response.headers['retry-after'].to_i < 20
+                            sleep response.headers['retry-after'].to_i
+                            response = HTTParty.get(url)
+                            result = response.body
+                        else
+                            result = ""
+                        end
+                    else
+                        result = response.body
+                    end
+                rescue SocketError => se
                     result = ""
-                    warn ohe
-                rescue OpenSSL::SSL::SSLError => ose
+                    warn se
+                rescue OpenSSL::SSL::SSLError => ssle
                     result = ""
-                    warn ose
+                    warn ssle
                 end
             end
             Database.instance.cache(key: 'url_' + url.to_s + '_' + js.to_s, value: result)
