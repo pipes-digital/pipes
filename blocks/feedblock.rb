@@ -51,6 +51,10 @@ class Feedblock < Block
                 feedid = url.scan(/channel\/[^\/]+/).first.gsub('channel/', '')
                 url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + feedid
             end
+            if (url.include?('www.youtube.com/c/'))
+                feedid = url.scan(/c\/[^\/]+/).first.gsub('c/', '')
+                url = 'https://www.youtube.com/feeds/videos.xml?user=' + feedid
+            end
             if (url.include?('www.youtube.com/user'))
                 feedid = url.scan(/user\/[^\/]+/).first.gsub('user/', '')
                 url = 'https://www.youtube.com/feeds/videos.xml?user=' + feedid
