@@ -52,8 +52,10 @@ class Feedblock < Block
                 url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + feedid
             end
             if (url.include?('www.youtube.com/c/'))
-                feedid = url.scan(/c\/[^\/]+/).first.gsub('c/', '')
-                url = 'https://www.youtube.com/feeds/videos.xml?user=' + feedid
+                htmlPage = Downloader.new.get(url)
+                canoncialPage = htmlPage.scan(/<link rel="canonical" href="(.+)"/).first.first
+                feedid = canoncialPage.scan(/channel\/[^\/]+/).first.gsub('channel/', '')
+                url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + feedid
             end
             if (url.include?('www.youtube.com/user'))
                 feedid = url.scan(/user\/[^\/]+/).first.gsub('user/', '')
