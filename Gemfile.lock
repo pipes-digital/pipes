@@ -58,7 +58,7 @@ GEM
       mime-types-data (~> 3.2015)
     mime-types-data (3.2021.0225)
     mini_mime (1.0.2)
-    mini_portile2 (2.6.1)
+    mini_portile2 (2.8.0)
     minitest (5.14.1)
     moneta (1.2.1)
     multi_json (1.14.1)
@@ -68,8 +68,8 @@ GEM
       ruby2_keywords (~> 0.0.1)
     naught (1.1.0)
     nio4r (2.5.8)
-    nokogiri (1.12.5)
-      mini_portile2 (~> 2.6.1)
+    nokogiri (1.13.2)
+      mini_portile2 (~> 2.8.0)
       racc (~> 1.4)
     oga (3.3)
       ast
@@ -80,7 +80,7 @@ GEM
     public_suffix (4.0.6)
     puma (4.3.11)
       nio4r (~> 2.0)
-    racc (1.5.2)
+    racc (1.6.0)
     rack (2.2.3)
     rack-protection (2.0.8.1)
       rack
