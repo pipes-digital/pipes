@@ -43,36 +43,14 @@ class Combineblock < Block
                     end
                 end
                 
+                maker.channel.link = 'https://www.pipes.digital/feed/' + self.pipe.encodedId
+
                 items.concat(feed.items)
             end
             
             items.each do |item|
                 maker.items.new_item do |newItem|
-                    newItem.title = item.title
-                    if item.updated
-                        newItem.updated = item.updated.to_s
-                    end
-                    newItem.pubDate = item.published.to_s if item.published
-                    if (item.url && item.url != '')
-                        newItem.link = item.url
-                    else
-                        newItem.link = ''
-                    end
-                    newItem.content_encoded = item.content
-                    newItem.guid.content = item.guid
-                    newItem.guid.isPermaLink = item.guid.include?('http')
-                    newItem.description = item.summary if item.summary && ! item.summary.empty?
-                    newItem.author = item.author if item.author
-                    if item.attachments?
-                        newItem.enclosure.url = item.attachment.url
-                        newItem.enclosure.length = item.attachment.length
-                        newItem.enclosure.type = item.attachment.type
-                    end
-                    item.categories.each do |category|
-                        target = newItem.categories.new_category
-                        target.content = category.name
-                        target.domain = category.scheme
-                    end
+                    newItem = transferData(newItem, item)
                 end
             end
         end
