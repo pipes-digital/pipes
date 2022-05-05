@@ -21,6 +21,7 @@ class Builderblock < Block
             else
                 maker.channel.title = self.pipe.title || 'Feed created by Pipes'
             end
+            maker.channel.link = 'https://www.pipes.digital/feed/' + self.pipe.encodedId
             maker.channel.description = ' ' # the rss won't get emitted if description is empty
 
             for i in 0...contentFeed.items.length
