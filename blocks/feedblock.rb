@@ -1,5 +1,6 @@
 
 require 'nokogiri'
+require 'addressable/uri'
 
 class Feedblock < Block
     def process(inputs)
@@ -28,7 +29,7 @@ class Feedblock < Block
         if page[0..50].include?('<html') || page[0..50].include?('<HTML')
             # we got a page link instead of a feed, but we can try to look for a linked feed
             doc = Nokogiri::HTML(page)
-            origUrl = URI.parse(URI.escape(url))
+            origUrl = URI.parse(Addressable::URI.parse(url))
             begin
                 url = doc.css('link[rel="alternate"]').first['href']
             rescue NoMethodError => nme
