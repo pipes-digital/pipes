@@ -2149,7 +2149,7 @@ window.onload = function() {
     }
 
     document.addEventListener("keyup", function(event) {
-        if (event.ctrlKey && event.keyCode == 90) {
+        if (event.ctrlKey && event.keyCode == 90 && document.activeElement.tagName !== "INPUT") {
             restoreState()
         }
     });
