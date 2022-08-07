@@ -3,6 +3,15 @@
     grid-template-columns: 200px auto;
     margin: 0;
     height: 100%;
+    user-select: none;
+}
+
+#editor input {
+    user-select: auto;
+}
+
+#editor #inspector {
+    user-select: text;
 }
 
 *, *:before, *:after {
