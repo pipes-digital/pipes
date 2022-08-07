@@ -985,8 +985,8 @@ function SortBlock(x, y) {
     var desc = document.createElement('option');
     desc.value = 'desc';
     desc.text = 'Descending';
-    sortorder.appendChild(asc);
     sortorder.appendChild(desc);
+    sortorder.appendChild(asc);
     sortorder.style.position = 'absolute';
     sortorder.setAttribute('data-xoffset', 30);
     sortorder.setAttribute('data-yoffset', 60);
