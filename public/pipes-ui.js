@@ -981,10 +981,10 @@ function SortBlock(x, y) {
     var sortorder = document.createElement('select');
     var asc = document.createElement('option');
     asc.value = 'asc';
-    asc.text = 'Ascending';
+    asc.text = 'Oldest | A-Z';
     var desc = document.createElement('option');
     desc.value = 'desc';
-    desc.text = 'Descending';
+    desc.text = 'Newest | Z-A';
     sortorder.appendChild(desc);
     sortorder.appendChild(asc);
     sortorder.style.position = 'absolute';
