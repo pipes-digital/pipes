@@ -981,12 +981,12 @@ function SortBlock(x, y) {
     var sortorder = document.createElement('select');
     var asc = document.createElement('option');
     asc.value = 'asc';
-    asc.text = 'Ascending';
+    asc.text = 'Oldest | A-Z';
     var desc = document.createElement('option');
     desc.value = 'desc';
-    desc.text = 'Descending';
-    sortorder.appendChild(asc);
+    desc.text = 'Newest | Z-A';
     sortorder.appendChild(desc);
+    sortorder.appendChild(asc);
     sortorder.style.position = 'absolute';
     sortorder.setAttribute('data-xoffset', 30);
     sortorder.setAttribute('data-yoffset', 60);
