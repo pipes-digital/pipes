@@ -1,4 +1,7 @@
 # Pipes CE
+
+[![CI](https://github.com/pipes-digital/pipes/actions/workflows/ci.yml/badge.svg)](https://github.com/pipes-digital/pipes/actions/workflows/ci.yml)
+
 The open source CE edition of pipes.digital
 
 ![pipes ce example](https://www.onli-blogging.de/uploads/pipesce.png)
