@@ -83,6 +83,7 @@ GEM
       ast
       ruby-ll (~> 2.1)
     open_uri_redirections (0.2.1)
+    power_assert (2.0.1)
     props (1.2.0)
       iniparser (>= 0.1.0)
     public_suffix (4.0.6)
@@ -137,6 +138,8 @@ GEM
       unicode-display_width (>= 1.5, < 3.0)
       unicode_utils (~> 1.4)
     strings-ansi (0.2.0)
+    test-unit (3.5.3)
+      power_assert
     textutils (1.4.0)
       activesupport
       logutils (>= 0.6.1)
@@ -194,6 +197,7 @@ DEPENDENCIES
   sinatra-portier
   sqlite3
   strings
+  test-unit
   thread
   throttle-queue
   to_regexp

@@ -1,4 +1,5 @@
 require 'sqlite3'
+require 'singleton'
 
 class Database
     include Singleton
@@ -6,11 +7,20 @@ class Database
     attr_reader :db
     
     def initialize
-        self.setupDB
+        self.setupDB(:file)
     end
 
-    def setupDB
-        @db = SQLite3::Database.new "pipes.db"
+    # Activate testmode, which means re-initializing the sqlite databases in memory
+    def testmode
+        self.setupDB(:memory)
+    end
+
+    def setupDB(mode)
+        if (mode == :file)
+            @db = SQLite3::Database.new "pipes.db"
+        else
+            @db = SQLite3::Database.new ":memory:"
+        end
 
         begin
             @db.execute 'CREATE TABLE IF NOT EXISTS users(
@@ -76,7 +86,11 @@ class Database
             @db.execute 'ALTER TABLE pipes ADD public BOOLEAN DEFAULT 0;'
         end
 
-        @hookdb = SQLite3::Database.new "hooks.db"
+        if (mode == :file)
+            @hookdb = SQLite3::Database.new "hooks.db"
+        else
+            @hookdb = SQLite3::Database.new ":memory:"
+        end
 
         begin
             @hookdb.execute 'CREATE TABLE IF NOT EXISTS hooks(
