@@ -23,7 +23,7 @@ class TestSortBlock < Test::Unit::TestCase
                 <item><title>Second</title><link>https://www.example.com/</link><pubDate>Mon, 19 Sep 2022 04:37:58 +0000</pubDate><description>ABC</description></item>
             </channel>
         </rss>'
-        assert_equal(['<pubDate>Thu, 01 Jan 1970 01:00:00 +0100</pubDate>', '<pubDate>Tue, 20 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Mon, 19 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Sun, 18 Sep 2022 04:37:58 -0000</pubDate>'], sortblock.process([test_feed]).scan(/<pubDate>.*<\/pubDate>/))
+        assert_equal(['<pubDate>Tue, 20 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Mon, 19 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Sun, 18 Sep 2022 04:37:58 -0000</pubDate>'], sortblock.process([test_feed]).scan(/<pubDate>.*<\/pubDate>/).last(3))
     end
 
     def test_oldest_first
@@ -37,7 +37,7 @@ class TestSortBlock < Test::Unit::TestCase
                 <item><title>Second</title><link>https://www.example.com/</link><pubDate>Mon, 19 Sep 2022 04:37:58 +0000</pubDate><description>ABC</description></item>
             </channel>
         </rss>'
-        assert_equal(['<pubDate>Thu, 01 Jan 1970 01:00:00 +0100</pubDate>', '<pubDate>Sun, 18 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Mon, 19 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Tue, 20 Sep 2022 04:37:58 -0000</pubDate>'], sortblock.process([test_feed]).scan(/<pubDate>.*<\/pubDate>/))
+        assert_equal(['<pubDate>Sun, 18 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Mon, 19 Sep 2022 04:37:58 -0000</pubDate>', '<pubDate>Tue, 20 Sep 2022 04:37:58 -0000</pubDate>'], sortblock.process([test_feed]).scan(/<pubDate>.*<\/pubDate>/).last(3))
     end
  
 end
