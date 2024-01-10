@@ -31,10 +31,13 @@ class Downloader
 
     def _get(url, js)
         if js
-            session = Capybara::Session.new(:selenium_chrome_headless)
-            session.visit(url)
-            result = session.body
-            session.driver.browser.close
+            begin
+                session = Capybara::Session.new(:selenium_chrome_headless)
+                session.visit(url)
+                return session.body
+            ensure
+                session.driver.quit
+            end
         else
             begin
                 response = HTTParty.get(url)
