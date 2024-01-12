@@ -1,16 +1,23 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (7.0.4.3)
+    activesupport (7.1.2)
+      base64
+      bigdecimal
       concurrent-ruby (~> 1.0, >= 1.0.2)
+      connection_pool (>= 2.2.5)
+      drb
       i18n (>= 1.6, < 2)
       minitest (>= 5.1)
+      mutex_m
       tzinfo (~> 2.0)
     addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
     american_date (1.2.0)
     ansi (1.5.0)
     ast (2.4.2)
+    base64 (0.2.0)
+    bigdecimal (3.1.5)
     buftok (0.2.0)
     cachy (0.4.2)
       mini_memory_store
@@ -25,8 +32,11 @@ GEM
       xpath (~> 3.2)
     childprocess (4.1.0)
     concurrent-ruby (1.2.2)
+    connection_pool (2.4.1)
     domain_name (0.5.20190701)
       unf (>= 0.0.5, < 1.0.0)
+    drb (2.2.0)
+      ruby2_keywords
     equalizer (0.0.11)
     feedparser (2.2.0)
       logutils (>= 0.6.1)
@@ -50,7 +60,7 @@ GEM
     httparty (0.21.0)
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
-    i18n (1.12.0)
+    i18n (1.14.1)
       concurrent-ruby (~> 1.0)
     iniparser (1.0.1)
     jsonpath (1.1.0)
@@ -64,13 +74,14 @@ GEM
     mini_memory_store (1.0.0)
     mini_mime (1.1.2)
     mini_portile2 (2.8.0)
-    minitest (5.18.0)
+    minitest (5.21.1)
     moneta (1.4.2)
     multi_json (1.15.0)
     multi_xml (0.6.0)
     multipart-post (2.1.1)
     mustermann (2.0.2)
       ruby2_keywords (~> 0.0.1)
+    mutex_m (0.2.0)
     naught (1.1.0)
     nio4r (2.7.0)
     nokogiri (1.13.9)
