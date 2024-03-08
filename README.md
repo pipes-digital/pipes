@@ -28,15 +28,6 @@ When everything is installed you can start the server:
 
     bundle exec puma -e development
 
-### Activating the twitter block
-
-The Twitter block accesses the official Twitter API, the documentation to get started is on [developer.twitter.com](https://developer.twitter.com/en/docs/basics/getting-started) and the [repo of the twitter gem](https://github.com/sferik/twitter). Four variables need to be filled with environment variables you can provide when starting the server:
-
-    TWITTER_CONSUMER_KEY
-    TWITTER_CONSUMER_SECRET
-    TWITTER_ACCESS_TOKEN
-    TWITTER_ACCESS_TOKEN_SECRET
-
 ### Logging in
 
 Pipes CE uses [portier](https://portier.github.io/) to provide an easy passwordless login. After the installation you can immediately login with every email address you control.
