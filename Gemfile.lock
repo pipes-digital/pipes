@@ -106,7 +106,8 @@ GEM
       rack (>= 1.0, < 3)
     rake (13.0.6)
     regexp_parser (2.2.1)
-    rexml (3.2.5)
+    rexml (3.3.3)
+      strscan
     rss (0.2.9)
       rexml
     ruby-ll (2.1.2)
@@ -146,6 +147,7 @@ GEM
       unicode-display_width (>= 1.5, < 3.0)
       unicode_utils (~> 1.4)
     strings-ansi (0.2.0)
+    strscan (3.1.0)
     test-unit (3.5.3)
       power_assert
     textutils (1.4.0)
