@@ -4,6 +4,10 @@ require 'singleton'
 class Database
     include Singleton
 
+    # Configuration constants
+    CACHE_CLEANUP_AGE = 7200  # 2 hours in seconds
+    WEBHOOK_CLEANUP_AGE = 7200  # 2 hours in seconds
+
     attr_reader :db
     
     def initialize
@@ -206,7 +210,7 @@ class Database
     # clean all cached entries older than 2 hours
     def cleanCache()
         begin
-            @db.execute("DELETE FROM cache WHERE CAST(date  AS  integer) < (CAST(strftime('%s', 'now')  AS  integer) - 7200);", )
+            @db.execute("DELETE FROM cache WHERE CAST(date  AS  integer) < (CAST(strftime('%s', 'now')  AS  integer) - ?);", CACHE_CLEANUP_AGE)
             @db.execute("VACUUM")
         rescue => error
             warn "cleaning cache: #{error}"
@@ -285,7 +289,7 @@ class Database
 
     def cleanHooks()
         begin
-            return @hookdb.execute("DELETE FROM hooks WHERE CAST(strftime('%s', date) AS INT) < ?", (Time.now - 3600).to_i)
+            return @hookdb.execute("DELETE FROM hooks WHERE CAST(strftime('%s', date) AS INT) < ?", (Time.now - WEBHOOK_CLEANUP_AGE).to_i)
         rescue => error
             warn "clean hooks: #{error}"
         end

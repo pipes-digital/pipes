@@ -1,5 +1,9 @@
 class Pipe
 
+    # Configuration
+    HASHIDS_PIPE_SECRET = ENV['PIPES_HASHIDS_PIPE_SECRET'] || 'pipedypipe'
+    CACHE_TTL = 600  # seconds (10 minutes)
+
     # the final output block that has to return a feed. Its run-function will call all children block, who will do the same
     attr_accessor :output
     attr_accessor :title
@@ -23,7 +27,7 @@ class Pipe
     end
 
     def encodedId()
-        return Hashids.new("pipedypipe", 8).encode(@id) unless @id == :temp
+        return Hashids.new(HASHIDS_PIPE_SECRET, 8).encode(@id) unless @id == :temp
         return "temp"
     end
 
@@ -88,11 +92,11 @@ class Pipe
         else
             id = @id.to_s + mode.to_s + Digest::SHA1.hexdigest(@params.to_s)
             result, date = Database.instance.getCache(key: id)
-            if date.nil? || (date + 600) < Time.now.to_i
+            if date.nil? || (date + CACHE_TTL) < Time.now.to_i
                 result = output.run
                 if mode == :txt
                     begin
-                        doc = Nokogiri::XML(result)
+                        doc = Nokogiri::XML(result) { |config| config.nonet.noent }
                         contents = doc.xpath('//item/content:encoded')
                         result = contents.map{|x| x.content.strip }.join("\n")
                     rescue Nokogiri::XML::XPath::SyntaxError

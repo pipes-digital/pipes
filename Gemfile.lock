@@ -140,7 +140,8 @@ GEM
       simpleidn (>= 0.0.9)
       sinatra (>= 1.1.0)
       url_safe_base64 (>= 0.2.2)
-    sqlite3 (1.4.2)
+    sqlite3 (1.7.3)
+      mini_portile2 (~> 2.8.0)
     strings (0.2.1)
       strings-ansi (~> 0.2)
       unicode-display_width (>= 1.5, < 3.0)
@@ -203,7 +204,7 @@ DEPENDENCIES
   sinatra
   sinatra-contrib
   sinatra-portier
-  sqlite3
+  sqlite3 (~> 1.6)
   strings
   test-unit
   thread

@@ -12,8 +12,22 @@ class Feedblock < Block
             url = self.options[:userinputs][0]
         end
 
-        if url.empty?
+        if url.nil? || url.empty?
             return '<rss version="2.0"><channel><title>No Feed provided</title><link></link><description>The feed block was given no url</description></channel></rss>'
+        end
+        
+        # Validate URL format
+        begin
+            parsed_url = Addressable::URI.parse(url)
+            unless parsed_url.scheme =~ /^https?$/i
+                return '<rss version="2.0"><channel><title>Invalid URL</title><link></link><description>Only HTTP and HTTPS URLs are allowed</description></channel></rss>'
+            end
+            # Prevent SSRF attacks by blocking private IP ranges
+            if parsed_url.host =~ /^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|localhost)/i
+                return '<rss version="2.0"><channel><title>Blocked URL</title><link></link><description>Access to private networks is not allowed</description></channel></rss>'
+            end
+        rescue => e
+            return '<rss version="2.0"><channel><title>Invalid URL</title><link></link><description>The provided URL is malformed</description></channel></rss>'
         end 
 
         url = detectHiddenFeeds(url)
