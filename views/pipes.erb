@@ -45,15 +45,15 @@
                     <li>
                         <dl id="<%= encodeid(pipe['id']) %>" <%= 'class="own_pipe"' if pipe['user'].to_s == userEmailToId(authorized_email).to_s %> >
                             <dt>Title</dt>
-                            <dd><span class="likes"><i class="likesymbol <%= likedpipes&.find{|x| x['pipe'] == pipe['id'] } ? 'liked fas fa-heart filled' : 'fas fa-heart' %>"></i> <%= pipe['likes'] %></span> <span class="title"><%= pipe['title'] %></span></dd>
+                            <dd><span class="likes"><i class="likesymbol <%= likedpipes&.find{|x| x['pipe'] == pipe['id'] } ? 'liked fas fa-heart filled' : 'fas fa-heart' %>"></i> <%= pipe['likes'] %></span> <span class="title"><%= h(pipe['title']) %></span></dd>
                             <dt>Preview</dt>
                             <dd><a href="<%= url '/pipe/' + encodeid(pipe['id']) %>"><svg class="preview"><g transform="scale(0.2)"><%= pipe['preview'] %></g></svg></a></dd>
                             <dt>Description</dt>
-                            <dd class="description"><%= pipe['description'].length > 140 ? (pipe['description'][0..140] + '...') : pipe['description'] %></dd>
+                            <dd class="description"><%= h(pipe['description'].length > 140 ? (pipe['description'][0..140] + '...') : pipe['description']) %></dd>
                             <dt>Tags</dt>
                             <dd class="tags">
                                 <% pipe['tags']&.split(',')&.each do |tag| %>
-                                    <a href="<%= url '/pipes?tag=' + tag %>"><span class="tag"><%= tag %></span></a>
+                                    <a href="<%= url '/pipes?tag=' + uh(tag) %>"><span class="tag"><%= h(tag) %></span></a>
                                 <% end %>
                             </dd>
                         </dl>

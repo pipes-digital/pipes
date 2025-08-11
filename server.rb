@@ -31,6 +31,13 @@ require "sinatra/json"
 pool = Thread.pool(1)
 set :browserid_button_class, "pure-button pure-button-primary"
 
+# Configuration constants
+HASHIDS_SECRET = ENV['PIPES_HASHIDS_SECRET'] || 'asdqwrwqr34pipes'
+HASHIDS_PIPE_SECRET = ENV['PIPES_HASHIDS_PIPE_SECRET'] || 'pipedypipe'
+CACHE_CLEANUP_INTERVAL = 3605  # seconds
+CACHE_TTL = 600  # seconds (10 minutes)
+WEBHOOK_CLEANUP_INTERVAL = 7200  # seconds (2 hours)
+
 helpers do
 
     include Rack::Utils
@@ -42,13 +49,14 @@ helpers do
     end
 
     def encodeid(id)
-        Hashids.new("asdqwrwqr34pipes", 8).encode(id)
+        Hashids.new(HASHIDS_SECRET, 8).encode(id)
     end
 
     def gravatar
         begin
             email_address = authorized_email.downcase
-        rescue
+        rescue => e
+            logger.warn "Failed to get authorized email for gravatar: #{e.message}"
             return "https://www.gravatar.com/avatar/0000?d=mm"
         end
         hash = Digest::MD5.hexdigest(email_address)
@@ -58,7 +66,8 @@ helpers do
     def userEmailToId(email)
         begin
             return Database.instance.getUserId(email: email)
-        rescue
+        rescue => e
+            logger.warn "Failed to get user ID for email: #{e.message}"
         end
         return nil
     end
@@ -74,7 +83,8 @@ helpers do
             params.each do |k,v|
                 begin
                     url += CGI.escape(k) + '=' + CGI.escape(v) + "&"
-                rescue
+                rescue => e
+                    logger.warn "Failed to escape parameter #{k}: #{e.message}"
                 end
             end
         end
@@ -89,7 +99,7 @@ configure do
         while true
             Database.instance.cleanHooks
             Database.instance.cleanCache
-            sleep 3605
+            sleep CACHE_CLEANUP_INTERVAL
         end
     }
 end
@@ -117,13 +127,13 @@ post '/pipe' do
     hashed_id = params[:id]
     hashed_id = nil if params[:id] == 'undefined'
     if hashed_id
-        id = Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id)
+        id = Hashids.new(HASHIDS_SECRET, 8).decode(hashed_id)
     end
     if hashed_id.nil?
         # We restrict the number of maximum pipes according to the users plan
         return 402 if ! User.new(email: authorized_email).hasFreeStorage
     end
-    return Hashids.new("asdqwrwqr34pipes", 8).encode(Database.instance.storePipe(id: id, user: authorized_email, pipe: params[:pipe], preview: params[:preview]))
+    return Hashids.new(HASHIDS_SECRET, 8).encode(Database.instance.storePipe(id: id, user: authorized_email, pipe: params[:pipe], preview: params[:preview]))
 end
 
 # endpoint to get a pipe json, or the pipe overview page
@@ -297,7 +307,7 @@ end
 
 post %r{/copyPipe/(\w+)} do |hashed_id|
     protected!
-    Hashids.new("asdqwrwqr34pipes", 8).encode(Database.instance.copyPipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email))
+    Hashids.new(HASHIDS_SECRET, 8).encode(Database.instance.copyPipe(id: Hashids.new(HASHIDS_SECRET, 8).decode(hashed_id), user: authorized_email))
 end
 
 post %r{/like/(\w+)} do |hashed_id|

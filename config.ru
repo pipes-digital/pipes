@@ -8,7 +8,7 @@ require 'moneta'
 require 'rack/session/moneta'
 
 use Rack::Session::Moneta,
-    expire_after: 259200000,
+    expire_after: 2592000, # 30 days in seconds (was incorrectly set to ~8 years)
     store: Moneta.new(:Sqlite, file: "sessions.db")
 ###
 

@@ -1,4 +1,7 @@
 class User
+    # Configuration
+    MAX_PIPES_LIMIT = ENV['PIPES_MAX_USER_PIPES'] ? ENV['PIPES_MAX_USER_PIPES'].to_i : 1000
+    
     attr_accessor :email
     attr_accessor :plan
 
@@ -9,7 +12,7 @@ class User
 
     def hasFreeStorage()
         pipes = Database.instance.getPipes(user: email)
-        pipes.size < 1000
+        pipes.size < MAX_PIPES_LIMIT
     end
 
     # Fetch the json code for all pipes the user owns and put them into a single string. This will also make sure all the information I don't

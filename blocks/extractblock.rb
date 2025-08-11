@@ -35,7 +35,7 @@ class Extractblock < Block
                         content = content.strip.gsub(/\]\]\z/, '')
                     end
                     doc = Nokogiri::HTML(content)
-                when 'xml' then doc = Nokogiri::XML(content)
+                when 'xml' then doc = Nokogiri::XML(content) { |config| config.nonet.noent }
                 when 'json' then doc = JSON.parse(content)
             end
             

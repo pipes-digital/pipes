@@ -48,13 +48,13 @@
                 <li>
                     <dl id="<%= encodeid(pipe['id']) %>">
                         <dt>Title</dt>
-                        <dd><span class="title"><%= pipe['title'] %> <i class="edit fas fa-edit"></i></span> <button class="delete"><i class="deleteicon fas fa-trash"></i></button></dd>
+                        <dd><span class="title"><%= h(pipe['title']) %> <i class="edit fas fa-edit"></i></span> <button class="delete"><i class="deleteicon fas fa-trash"></i></button></dd>
                         <dt>Preview</dt>
                         <dd><a href="<%= url '/pipe/' + encodeid(pipe['id']) %>"><svg class="preview"><g transform="scale(0.2)"><%= pipe['preview'] %></g></svg></a></dd>
                         <dt>Tags</dt>
                         <dd>
                             <% pipe['tags']&.split(',')&.each do |tag| %>
-                                <span class="tag"><%= tag %><button class="tagremove"><i class="tagremoveicon fas fa-minus-square"></i></button></span>
+                                <span class="tag"><%= h(tag) %><button class="tagremove"><i class="tagremoveicon fas fa-minus-square"></i></button></span>
                             <% end %>
                             <% if pipe['tags'].nil? %>
                                 <span class="tag">No tags</span>
