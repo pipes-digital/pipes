@@ -1,6 +1,7 @@
-
 require 'nokogiri'
 require 'addressable/uri'
+require 'rss'
+require 'feedparser'
 
 class Feedblock < Block
     def process(inputs)
@@ -12,22 +13,8 @@ class Feedblock < Block
             url = self.options[:userinputs][0]
         end
 
-        if url.nil? || url.empty?
-            return '<rss version="2.0"><channel><title>No Feed provided</title><link></link><description>The feed block was given no url</description></channel></rss>'
-        end
-        
-        # Validate URL format
-        begin
-            parsed_url = Addressable::URI.parse(url)
-            unless parsed_url.scheme =~ /^https?$/i
-                return '<rss version="2.0"><channel><title>Invalid URL</title><link></link><description>Only HTTP and HTTPS URLs are allowed</description></channel></rss>'
-            end
-            # Prevent SSRF attacks by blocking private IP ranges
-            if parsed_url.host =~ /^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|localhost)/i
-                return '<rss version="2.0"><channel><title>Blocked URL</title><link></link><description>Access to private networks is not allowed</description></channel></rss>'
-            end
-        rescue => e
-            return '<rss version="2.0"><channel><title>Invalid URL</title><link></link><description>The provided URL is malformed</description></channel></rss>'
+        if url.empty?
+            return self.errorFeed('No Feed provided', 'The feed block was given no url')
         end 
 
         url = detectHiddenFeeds(url)
@@ -37,7 +24,11 @@ class Feedblock < Block
             page = downloader.get(url)
         rescue TypeError => te
             # the input was probably no real url
-            return '<rss version="2.0"><channel><title>Feed download failed</title><link></link><description>The feed block could not download this, did you enter a real url?</description></channel></rss>'
+            return self.errorFeed('Feed download failed', 'The feed block could not download this, did you enter a real url?')
+        end
+
+        if page.empty?
+            return self.errorFeed('Feed download failed', 'The feed block could not download this, is the target URL up?')
         end
 
         if page[0..50].include?('<html') || page[0..50].include?('<HTML')
@@ -48,35 +39,72 @@ class Feedblock < Block
                 url = doc.css('link[rel="alternate"]').first['href']
             rescue NoMethodError => nme
                 # we could find no feed! To not die later on we will return a minimal error feed
-                return '<rss version="2.0"><channel><title>Feed not found</title><link></link><description>The feed block could find no feed under the given url</description></channel></rss>'
+                return self.errorFeed('Feed not found', 'The feed block could find no feed under the given url.')
             end
             if (! url.include?('http://') && ! url.include?('https://') )
                 url = "#{origUrl.scheme}://#{origUrl.host}/" + url
             end
-            return downloader.get(url)
+            feedContent = downloader.get(url)
         else
-            return page
+            feedContent = page
         end
+        
+        # Two-ponged approach: For better compatibility we start with the normalized feed gem
+        feed = FeedParser::Parser.parse(feedContent)
+        # But we also try to get a regular ruby version, as that one has more fields
+        begin
+            rubyFeed = RSS::Parser.parse(feedContent)
+        rescue
+            warn "Could not parse ruby feed for " + url
+        end
+
+        rss = RSS::Maker.make("rss2.0") do |maker|
+            maker.channel.updated = feed.updated&.to_s
+            maker.channel.title = feed.title
+            if (feed.url && feed.url != '')
+                maker.channel.link = feed.url
+            else
+                if (feed.feed_url && feed.feed_url != '')
+                    maker.channel.link = feed.feed_url
+                else
+                    maker.channel.link = ' ' # the rss won't get emitted if link is empty
+                end
+            end
+            if (feed.summary && feed.summary != '')
+                maker.channel.description = feed.summary
+            else
+                maker.channel.description = ' ' # the rss won't get emitted if description is empty
+            end
+
+            if (rubyFeed&.respond_to?(:channel) && rubyFeed&.channel&.image)
+                maker.image.url = rubyFeed.channel.image.url
+                maker.image.title =  rubyFeed.channel.image.title
+                maker.image.width = rubyFeed.channel.image.width if rubyFeed.channel.image.width
+                maker.image.height = rubyFeed.channel.image.height if rubyFeed.channel.image.height
+                maker.image.description = rubyFeed.channel.image.description
+            end
+
+            feed.items.each do |item|
+                maker.items.new_item do |newItem|
+                    newItem = transferData(newItem, item)
+                end
+            end
+        end
+        return rss
     end
 
     # detect feeds for important sites that don't advertise them, youtube so far
     def detectHiddenFeeds(url)
         if (url.include?('www.youtube.com'))
-            if (url.include?('www.youtube.com/channel'))
+            p  url.scan(/https:\/\/www.youtube.com\/[^\/]+$/)
+            case
+            when url.include?('www.youtube.com/channel')
                 feedid = url.scan(/channel\/[^\/]+/).first.gsub('channel/', '')
                 url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + feedid
-            end
-            if (url.include?('www.youtube.com/c/'))
-                htmlPage = Downloader.new.get(url)
-                canoncialPage = htmlPage.scan(/<link rel="canonical" href="(.+)"/).first.first
-                feedid = canoncialPage.scan(/channel\/[^\/]+/).first.gsub('channel/', '')
-                url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + feedid
-            end
-            if (url.include?('www.youtube.com/user'))
+            when url.include?('www.youtube.com/user')
                 feedid = url.scan(/user\/[^\/]+/).first.gsub('user/', '')
                 url = 'https://www.youtube.com/feeds/videos.xml?user=' + feedid
-            end
-            if (url.include?('www.youtube.com/playlist?list') || (url.include?('www.youtube.com/watch?') && url.include?('list=')))
+            when (url.include?('www.youtube.com/playlist?list') || (url.include?('www.youtube.com/watch?') && url.include?('list=')))
                 feedid = url.scan(/list=[^\/]+/).first.gsub('list=', '')
                 url = 'https://www.youtube.com/feeds/videos.xml?playlist_id=' + feedid
             end

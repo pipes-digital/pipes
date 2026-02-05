@@ -24,7 +24,7 @@ class Webhookblock < Block
             end
         end
 
-        return rss.to_s
+        return rss
     end
 
 end

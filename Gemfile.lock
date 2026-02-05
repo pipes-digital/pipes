@@ -1,138 +1,147 @@
+GIT
+  remote: https://github.com/onli/oxml
+  revision: 05c1050f0e328709a3e2e60ad4c18144a01855b8
+  branch: merged
+  specs:
+    oxml (0.5.2)
+      ox (~> 2.14)
+
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (7.1.2)
+    activesupport (8.1.2)
       base64
       bigdecimal
-      concurrent-ruby (~> 1.0, >= 1.0.2)
+      concurrent-ruby (~> 1.0, >= 1.3.1)
       connection_pool (>= 2.2.5)
       drb
       i18n (>= 1.6, < 2)
+      json
+      logger (>= 1.4.2)
       minitest (>= 5.1)
-      mutex_m
-      tzinfo (~> 2.0)
-    addressable (2.8.0)
-      public_suffix (>= 2.0.2, < 5.0)
-    american_date (1.2.0)
+      securerandom (>= 0.3)
+      tzinfo (~> 2.0, >= 2.0.5)
+      uri (>= 0.13.1)
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
+    american_date (1.3.0)
     ansi (1.5.0)
-    ast (2.4.2)
-    base64 (0.2.0)
-    bigdecimal (3.1.5)
-    buftok (0.2.0)
+    ast (2.4.3)
+    base64 (0.3.0)
+    bigdecimal (4.0.1)
     cachy (0.4.2)
       mini_memory_store
-    capybara (3.36.0)
-      addressable
-      matrix
-      mini_mime (>= 0.1.3)
-      nokogiri (~> 1.8)
-      rack (>= 1.6.0)
-      rack-test (>= 0.6.3)
-      regexp_parser (>= 1.5, < 3.0)
-      xpath (~> 3.2)
-    childprocess (4.1.0)
-    concurrent-ruby (1.2.2)
-    connection_pool (2.4.1)
-    domain_name (0.5.20190701)
-      unf (>= 0.0.5, < 1.0.0)
-    drb (2.2.0)
-      ruby2_keywords
-    equalizer (0.0.11)
-    feedparser (2.2.0)
+    concurrent-ruby (1.3.6)
+    connection_pool (3.0.2)
+    crass (1.0.6)
+    csv (3.3.5)
+    dalli (4.2.0)
+      logger
+    drb (2.2.3)
+    feedparser (2.2.1)
       logutils (>= 0.6.1)
       textutils (>= 1.0.0)
-    ffi (1.15.5)
-    ffi-compiler (1.0.1)
-      ffi (>= 1.0.0)
-      rake
+    ferrum (0.17.1)
+      addressable (~> 2.5)
+      base64 (~> 0.2)
+      concurrent-ruby (~> 1.1)
+      webrick (~> 1.7)
+      websocket-driver (~> 0.7)
+    finishing_moves (1.3)
     hashids (1.0.6)
-    http (4.4.1)
-      addressable (~> 2.3)
-      http-cookie (~> 1.0)
-      http-form_data (~> 2.2)
-      http-parser (~> 1.2.0)
-    http-cookie (1.0.4)
-      domain_name (~> 0.5)
-    http-form_data (2.3.0)
-    http-parser (1.2.3)
-      ffi-compiler (>= 1.0, < 2.0)
-    http_parser.rb (0.6.0)
-    httparty (0.21.0)
+    httparty (0.24.2)
+      csv
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
-    i18n (1.14.1)
+    i18n (1.14.8)
       concurrent-ruby (~> 1.0)
     iniparser (1.0.1)
-    jsonpath (1.1.0)
+    janeway-jsonpath (0.6.0)
+    json (2.18.0)
+    jsonpath (1.1.5)
       multi_json
-    jwt (2.3.0)
+    jwt (3.1.2)
+      base64
+    logger (1.7.0)
     logutils (0.6.1)
     lru_redux (1.1.0)
-    matrix (0.4.2)
-    memoizable (0.4.2)
-      thread_safe (~> 0.3, >= 0.3.1)
     mini_memory_store (1.0.0)
-    mini_mime (1.1.2)
-    mini_portile2 (2.8.5)
-    minitest (5.21.1)
-    moneta (1.4.2)
-    multi_json (1.15.0)
-    multi_xml (0.6.0)
-    multipart-post (2.1.1)
-    mustermann (2.0.2)
+    mini_mime (1.1.5)
+    minitest (6.0.1)
+      prism (~> 1.5)
+    moneta (1.6.0)
+    multi_json (1.19.1)
+    multi_xml (0.8.1)
+      bigdecimal (>= 3.1, < 5)
+    mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
-    mutex_m (0.2.0)
-    naught (1.1.0)
-    nio4r (2.7.0)
-    nokogiri (1.16.2)
-      mini_portile2 (~> 2.8.2)
+    nio4r (2.7.5)
+    nokogiri (1.19.0-aarch64-linux-gnu)
       racc (~> 1.4)
-    oga (3.3)
+    nokogiri (1.19.0-aarch64-linux-musl)
+      racc (~> 1.4)
+    nokogiri (1.19.0-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-musl)
+      racc (~> 1.4)
+    oga (3.4)
       ast
       ruby-ll (~> 2.1)
     open_uri_redirections (0.2.1)
-    power_assert (2.0.1)
+    ox (2.14.23)
+      bigdecimal (>= 3.0)
+    power_assert (3.0.1)
+    prism (1.9.0)
     props (1.2.0)
       iniparser (>= 0.1.0)
-    public_suffix (4.0.6)
-    puma (5.6.8)
+    public_suffix (7.0.2)
+    puma (7.2.0)
       nio4r (~> 2.0)
-    racc (1.7.3)
-    rack (2.2.8.1)
-    rack-protection (2.2.3)
-      rack
+    racc (1.8.1)
+    rack (3.2.4)
+    rack-protection (4.2.1)
+      base64 (>= 0.1.0)
+      logger (>= 1.6.0)
+      rack (>= 3.0.0, < 4)
     rack-rewrite (1.5.1)
-    rack-test (1.1.0)
-      rack (>= 1.0, < 3)
-    rake (13.0.6)
-    regexp_parser (2.2.1)
-    rexml (3.2.5)
-    rss (0.2.9)
+    rack-session (2.1.1)
+      base64 (>= 0.1.0)
+      rack (>= 3.0.0)
+    rake (13.3.1)
+    rexml (3.4.4)
+    rss (0.3.2)
       rexml
-    ruby-ll (2.1.2)
+    ruby-ll (2.1.4)
       ansi
       ast
     ruby2_keywords (0.0.5)
-    rubyzip (2.3.2)
-    selenium-webdriver (4.1.0)
-      childprocess (>= 0.5, < 5.0)
-      rexml (~> 3.2, >= 3.2.5)
-      rubyzip (>= 1.2.2)
-    simple_oauth (0.3.1)
-    simpleidn (0.2.1)
-      unf (~> 0.1.4)
-    sinatra (2.2.3)
-      mustermann (~> 2.0)
-      rack (~> 2.2)
-      rack-protection (= 2.2.3)
+    rubyzip (3.2.2)
+    sanitize (7.0.0)
+      crass (~> 1.0.2)
+      nokogiri (>= 1.16.8)
+    scylla (1.2.0)
+      sanitize
+      unicode (~> 0.4.4)
+    securerandom (0.4.1)
+    simpleidn (0.2.3)
+    sinatra (4.2.1)
+      logger (>= 1.6.0)
+      mustermann (~> 3.0)
+      rack (>= 3.0.0, < 4)
+      rack-protection (= 4.2.1)
+      rack-session (>= 2.0.0, < 3)
       tilt (~> 2.0)
-    sinatra-contrib (2.2.3)
-      multi_json
-      mustermann (~> 2.0)
-      rack-protection (= 2.2.3)
-      sinatra (= 2.2.3)
+    sinatra-contrib (4.2.1)
+      multi_json (>= 0.0.2)
+      mustermann (~> 3.0)
+      rack-protection (= 4.2.1)
+      sinatra (= 4.2.1)
       tilt (~> 2.0)
-    sinatra-portier (2.0)
+    sinatra-portier (2.1.1)
       addressable (>= 2.8)
       cachy (>= 0.4)
       jwt (>= 1.5.4)
@@ -140,77 +149,82 @@ GEM
       simpleidn (>= 0.0.9)
       sinatra (>= 1.1.0)
       url_safe_base64 (>= 0.2.2)
-    sqlite3 (1.7.3)
-      mini_portile2 (~> 2.8.0)
+    sqlite3 (2.9.0-aarch64-linux-gnu)
+    sqlite3 (2.9.0-aarch64-linux-musl)
+    sqlite3 (2.9.0-arm64-darwin)
+    sqlite3 (2.9.0-x86_64-darwin)
+    sqlite3 (2.9.0-x86_64-linux-gnu)
+    sqlite3 (2.9.0-x86_64-linux-musl)
     strings (0.2.1)
       strings-ansi (~> 0.2)
       unicode-display_width (>= 1.5, < 3.0)
       unicode_utils (~> 1.4)
     strings-ansi (0.2.0)
-    test-unit (3.5.3)
+    test-unit (3.7.7)
       power_assert
     textutils (1.4.0)
       activesupport
       logutils (>= 0.6.1)
       props (>= 1.1.2)
       rubyzip (>= 1.0.0)
-    thread (0.2.2)
-    thread_safe (0.3.6)
     throttle-queue (0.2.0)
-    tilt (2.0.11)
+    tilt (2.7.0)
     to_regexp (0.2.1)
-    twitter (7.0.0)
-      addressable (~> 2.3)
-      buftok (~> 0.2.0)
-      equalizer (~> 0.0.11)
-      http (~> 4.0)
-      http-form_data (~> 2.0)
-      http_parser.rb (~> 0.6.0)
-      memoizable (~> 0.4.0)
-      multipart-post (~> 2.0)
-      naught (~> 1.0)
-      simple_oauth (~> 0.3.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
-    unf (0.1.4)
-      unf_ext
-    unf_ext (0.0.8.1)
-    unicode-display_width (2.1.0)
+    unicode (0.4.4.5)
+    unicode-display_width (2.6.0)
     unicode_utils (1.4.0)
+    uri (1.1.1)
     url_safe_base64 (0.2.2)
-    xpath (3.2.0)
-      nokogiri (~> 1.8)
+    webrick (1.9.2)
+    websocket-driver (0.8.0)
+      base64
+      websocket-extensions (>= 0.1.0)
+    websocket-extensions (0.1.5)
 
 PLATFORMS
-  ruby
+  aarch64-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux-gnu
+  x86_64-linux-musl
 
 DEPENDENCIES
   addressable
   american_date
-  capybara
+  base64
+  dalli
   feedparser
+  ferrum
+  finishing_moves
   hashids (~> 1.0)
   httparty
+  janeway-jsonpath (~> 0.6.0)
   jsonpath
   lru_redux
-  moneta
   nokogiri
   oga
   open_uri_redirections
+  oxml!
   puma
+  rack
   rack-rewrite
+  rake
   rss
-  selenium-webdriver
+  sanitize
+  scylla
+  securerandom
   sinatra
   sinatra-contrib
-  sinatra-portier
-  sqlite3 (~> 1.6)
+  sinatra-portier (~> 2.0)
+  sqlite3
   strings
   test-unit
-  thread
   throttle-queue
   to_regexp
-  twitter
 
 BUNDLED WITH
-   2.0.1
+   2.7.1

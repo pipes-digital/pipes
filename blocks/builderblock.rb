@@ -2,6 +2,7 @@ class Builderblock < Block
     def process(inputs)
         if self.options[:userinputs]
             title = self.options[:userinputs][0]
+            recalculateGUID = self.options[:userinputs][1]
         end
         # title, content, description, date
         titleFeed = contentFeed = descriptionFeed = dateFeed = linkFeed = nil
@@ -9,7 +10,7 @@ class Builderblock < Block
         begin
             contentFeed = convertToFeeds(inputs[1])
         rescue NoMethodError => nme
-            return '<rss version="2.0"><channel><title>Could not build feed</title><link></link><description>Could not create a feed, did you connect something to the content input?</description></channel></rss>'
+            return self.errorFeed('Could not build feed', 'Could not create a feed, did you connect something to the content input?')
         end
         dateFeed = convertToFeeds(inputs[2]) if inputs[2]
         linkFeed = convertToFeeds(inputs[3]) if inputs[3]
@@ -31,36 +32,37 @@ class Builderblock < Block
                     else
                         newItem.title = 'untitled'
                     end
-                    if dateFeed && dateFeed.items[i]
-                        newItem.updated = dateFeed.items[i].content
-                    else
-                        newItem.updated = Time.now
-                    end
                     if linkFeed && linkFeed.items[i]
                         newItem.link = linkFeed.items[i].content
                     end
                     newItem.content_encoded = contentFeed.items[i].content
-                    if contentFeed.items[i].guid
-                        newItem.guid.content = contentFeed.items[i].guid
+                    if contentFeed.items[i].guid && ! recalculateGUID
+                        newItem.guid.content = contentFeed.items[i].guid.content
                     else
-                        begin
-                            newItem.guid.content = Digest::MD5.hexdigest(contentFeed.items[i].content)
-                        rescue TypeError => te
-                            newItem.guid.content = Digest::MD5.hexdigest(contentFeed.items[i].title)
-                        end
+                        newItem.guid.content = Digest::MD5.hexdigest(contentFeed.items[i].content.to_s + contentFeed.items[i].title.to_s)
                     end
-                    newItem.guid.isPermaLink = newItem.guid.content.include?('http')
+                    newItem.guid.isPermaLink = newItem.guid.content.include?('http') || false
+
+                    if dateFeed && dateFeed.items[i]
+                        newItem.updated = dateFeed.items[i].content
+                    else
+                        # because we want the date to stay stable we create it only once for each item
+                        itemDate = Database.instance.getset(newItem.guid.content + '_' + self.id + '_' + self.pipe.encodedId, Time.now.to_s)
+                        newItem.updated = itemDate
+                    end
                 end
             end
         end
 
-        return rss.to_s
+        return rss
     end
 
     def convertToFeeds(input)
-        begin
-            return FeedParser::Parser.parse(input)
-        rescue
+        if input.class == RSS::Rss
+            return input
+        else
+            # we probably got a String, directly from a download block. To enable manipulation
+            # of its data we transform it to RSS line by line
             rss = RSS::Maker.make("rss2.0") do |maker|
                 maker.channel.updated = Time.now
                 maker.channel.title = 'Feed created by Pipes'
@@ -76,7 +78,7 @@ class Builderblock < Block
                     end
                 end
             end
-            return FeedParser::Parser.parse(rss.to_s)
+            return rss
         end
     end
 

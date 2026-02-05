@@ -1,7 +1,6 @@
 class User
-    # Configuration
     MAX_PIPES_LIMIT = ENV['PIPES_MAX_USER_PIPES'] ? ENV['PIPES_MAX_USER_PIPES'].to_i : 1000
-    
+
     attr_accessor :email
     attr_accessor :plan
 
@@ -27,5 +26,13 @@ class User
             
         end
         return output
+    end
+
+    def deleteUser!()
+        rows = Database.instance.getPipes(user: self.email)
+        rows.each do |row|
+            Database.instance.deletePipe(user: self.email, id: row['id'])
+        end
+        Database.instance.deleteUser(email: self.email)
     end
 end

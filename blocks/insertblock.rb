@@ -1,26 +1,23 @@
-require 'nokogiri'   
+require 'nokogiri'
+require 'rss'
 require 'feedparser'
 
 class Insertblock < Block
     def process(inputs)
-        begin
-            insertElements = FeedParser::Parser.parse(inputs[0])
-        rescue NoMethodError => nme
-            return '<rss version="2.0"><channel><title>Feed with the element to insert could not be parsed</title><link></link><description>Is the feed given to this block empty?</description></channel></rss>'
-        end
+        insertElements = inputs[0]
         feed = inputs[1]
         target = self.options[:userinputs][0] if self.options[:userinputs]
         replacementMode = self.options[:userinputs][1] if self.options[:userinputs]
 
         if ! target || target.empty?
-            return '<rss version="2.0"><channel><title>No target</title><link></link><description>Please provide an xpath telling this block where to insert the element.</description></channel></rss>'
+            return self.errorFeed('No target', 'Please provide an xpath telling this block where to insert the element.')
         end
 
-        if ! feed || feed.empty?
-            return '<rss version="2.0"><channel><title>No feed to insert into</title><link></link><description>Please connect a feed to the second input.</description></channel></rss>'
+        if ! feed
+            return self.errorFeed('No feed to insert into', 'Please connect a feed to the second input.')
         end
 
-        feed = Nokogiri::XML(feed)
+        feed = Nokogiri::XML(feed.to_s)
         feed.xpath(target).each do |node|
             if replacementMode
                 node.content = insertElements.items.first.content
@@ -29,7 +26,7 @@ class Insertblock < Block
             end
         end
         
-        return feed.to_s
+        return RSS::Parser.parse(feed.to_s)
        
     end
 

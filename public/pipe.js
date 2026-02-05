@@ -26,6 +26,25 @@ function showLogin(target) {
     });
 }
 
+function shareDialog(id) {
+    vex.dialog.confirm({
+        message: 'Share Pipe?',
+        callback: function(value) {
+            if (value === true) {
+                var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+                xhr.open('POST', '/sharePipe/' + id);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState>3 && xhr.status==200) { location.reload(); }
+                };
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.send();
+            }
+        }
+        
+    });
+}
+
 window.onload = function () {
     try {
         document.querySelector('#loginlink').addEventListener('click', function(evt) {
@@ -77,22 +96,26 @@ window.onload = function () {
             });
         }
         if (evt.target.classList.contains('sharePipe')) {
-             vex.dialog.confirm({
-                message: 'Share Pipe?',
-                callback: function(value) {
-                    if (value === true) {
-                        var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
-                        xhr.open('POST', '/sharePipe/' + id);
-                        xhr.onreadystatechange = function() {
-                            if (xhr.readyState>3 && xhr.status==200) { location.reload(); }
-                        };
-                        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                        xhr.send();
+            if (document.querySelector('h2').textContent == 'unnamed' || document.querySelector('h2').textContent == 'unnamed ') {
+                vex.dialog.prompt({
+                    message: 'Please name your pipe first:',
+                    placeholder: document.querySelector('h2').textContent,
+                    callback: function(response) {
+                        if (response) {
+                            var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+                            xhr.open('POST', '/pipetitle/' + id );
+                            xhr.onreadystatechange = function() {
+                                if (xhr.readyState>3 && xhr.status==200) { shareDialog(id); }
+                            };
+                            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                            xhr.send('title=' + encodeURIComponent(response));
+                        }
                     }
-                }
-                
-            });
+                });
+            } else {
+                shareDialog(id);
+            }
         }
         if (evt.target.classList.contains('unsharePipe')) {
             vex.dialog.confirm({

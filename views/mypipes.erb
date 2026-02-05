@@ -3,22 +3,19 @@
 <head>
     <meta charset="utf-8">
     <title>My Pipes</title>
-    <link rel="stylesheet" href="/css/font-awesome-core.css?v=1">
-    <link rel="stylesheet" href="/css/font-awesome-solid.css?v=1">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/grids-responsive-min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/purecss/build/pure-min.css">
+    <link rel="stylesheet" href="/node_modules/purecss/build/grids-responsive-min.css">
+    <script src="/node_modules/vex-js/dist/js/vex.combined.min.js"></script>
     <script>vex.defaultOptions.className = 'vex-theme-wireframe'</script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-wireframe.css" />
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex.css" />
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex-theme-wireframe.css" />
     <script src="<%= url '/mypipes.js' %>"></script>
     <link href="<%= url 'style.css' %>" rel="stylesheet">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#9f00a7">
     <meta name="theme-color" content="#ffffff">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -36,7 +33,7 @@
                 </div>
                 <div class="pure-u-1 pure-u-md-1-2">
                     <section class="second">
-                        <i class="fas fa-heart"></i> Likes: <%= likes %>
+                        <img src="/icons/heart.svg"></img> Likes: <%= likes %>
                     </section>
                 </div>
             </aside>
@@ -48,18 +45,18 @@
                 <li>
                     <dl id="<%= encodeid(pipe['id']) %>">
                         <dt>Title</dt>
-                        <dd><span class="title"><%= h(pipe['title']) %> <i class="edit fas fa-edit"></i></span> <button class="delete"><i class="deleteicon fas fa-trash"></i></button></dd>
+                        <dd><span class="title"><%= pipe['title'] %> <img src="/icons/edit.svg" class="feather edit"></img></span> <button class="delete"><img src="/icons/trash.svg" class="feather deleteicon"></img></button></dd>
                         <dt>Preview</dt>
-                        <dd><a href="<%= url '/pipe/' + encodeid(pipe['id']) %>"><svg class="preview"><g transform="scale(0.2)"><%= pipe['preview'] %></g></svg></a></dd>
+                        <dd><a href="<%= url '/pipe/' + encodeid(pipe['id']) %>"><img class="preview" src="<%= inlineSvg(pipe['preview']) %>"></a></dd>
                         <dt>Tags</dt>
                         <dd>
                             <% pipe['tags']&.split(',')&.each do |tag| %>
-                                <span class="tag"><%= h(tag) %><button class="tagremove"><i class="tagremoveicon fas fa-minus-square"></i></button></span>
+                                <span class="tag"><%= tag %><button class="tagremove"><img src="/icons/minus-square.svg" class="feather tagremoveicon"></img></button></span>
                             <% end %>
                             <% if pipe['tags'].nil? %>
                                 <span class="tag">No tags</span>
                             <% end %> 
-                            <button class="tagadd"><i class="tagaddicon fas fa-plus-square"></i></button>
+                            <button class="tagadd"><img src="/icons/plus-square.svg" class="feather tagaddicon"></img></button>
                         </dd>
                     </dl>
                 </li>
@@ -68,5 +65,8 @@
         </div>
         <div class="pure-u-1 pure-u-md-1-5"> </div>
     </main>
+
+    <script src="/node_modules/@iconfu/svg-inject/dist/svg-inject.min.js"></script>
+    <script>SVGInject(document.querySelectorAll('img[src$=".svg"]'));</script>
 </body>
 </html>

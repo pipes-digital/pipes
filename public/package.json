@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@iconfu/svg-inject": "^1.2.3",
+    "purecss": "^3.0.0",
+    "vex-js": "^4.1.0"
+  }
+}

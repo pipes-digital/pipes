@@ -22,7 +22,6 @@
 #blocks summary {
     display: list-item;
     cursor: pointer;
-    padding-left: 1rem;
 }
 
 h1, h2, h3, h4 {
@@ -31,6 +30,10 @@ h1, h2, h3, h4 {
 
 a {
     color: #0da4c7;
+}
+
+button {
+    cursor: pointer;
 }
 
 .main-menu {
@@ -105,19 +108,18 @@ form.pure-menu-form {
     padding: 0.5em;
 }
 
-
 noscript {
     display: block;
     margin: 2em auto;
     text-align: center;
 }
 
+
 * {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
 }
-
 
 /*
  * -- BASE STYLES --
@@ -234,7 +236,7 @@ a.pure-button-primary {
 
 .splash-container {
     background: rgba(76,208,220,1);
-    background: -moz-linear-gradient(top, rgba(76,208,220,1) 0%, rgba(108,228,208,1) 100%);
+    background: -moz-linear-gradient(top, rgb(50, 152, 162) 0%, rgb(88, 185, 169) 100%);
     z-index: 1;
     overflow: hidden;
     /* The following styles are required for the "scroll-over" effect */
@@ -266,6 +268,7 @@ a.pure-button-primary {
     font-weight: 100;
     border-radius: 5px;
     line-height: 1em;
+    text-wrap: balance;
 }
 
 /* This is the subheading that appears on the blue section */
@@ -407,10 +410,24 @@ a.pure-button-primary {
     position: absolute;
     height: 100%;
     height: calc(100% - 3rem);
+    overflow: auto;
+    padding-top: .3rem;
 }
 
 #blocks h2 {
-    padding-left: 1rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+    margin-top: 1rem;
+    margin-bottom: 0;
+    margin-left: 0.3rem;
+    margin-right: 0.3rem;
+    background: #377b91;
+    color: #fdfdfd;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 400;
+    border: 1px solid #041D24;
+    border-bottom: none;
 }
 
 .vex.vex-theme-wireframe .vex-content {
@@ -419,54 +436,67 @@ a.pure-button-primary {
 
 #blocks ol {
     list-style-type: none;
-    padding-left: 1rem;
+    padding-left: 0.2rem;
     text-align: left;
-    margin-top: 0.5em;
-    margin-bottom: 1em;
+    margin-top: 0.1rem;
+    margin-bottom: 0.3rem;
 }
 
-.blockDragger:before {
-    font-family: "Font Awesome 5 Free"; 
-    content: "\f58e ";
-    letter-spacing: 0.1em;
-    color: grey;
+#blocks li {
+    display: flex;
+    gap: 0.3rem;
 }
 
-#save, #new, #outputFeed {
-    margin-left: 1rem;
+#save, #new, #outputFeed button {
+    margin-left: 0.3rem;
+    border: 1px solid #c2cad3;
+    box-shadow: 2px 2px 4px #c1cdd7;
+}
+
+#save:active, #new:active, #outputFeed button:active {
+    box-shadow: none;
 }
 
 #save {
-    display: block;
-    width: 7em;
-    padding-right: 2em;
-    margin-top: 1em;
-    
+    display: inline-block;    
 }
 
 #save i {
     width: 1em;
-    opacity: 0;
     transition: all 0.5s ease;
 }
 
-#save i.show {
-    opacity: 1;
-}
-
 .blockDragger {
-    border: 1px solid #1f8dd6;
+    border: 1px solid #9cbfd0;
     border-radius: 3px;
     color: #2d3e50;
-    width: 7em;
-    padding: 0.1em;
+    width: 8em;
     margin-top: 0.1em;
-    cursor: move;
+    margin-bottom: 0.1em;
+    cursor: grab;
     background-color: white;
-    display: inline-block;
+    display: inline-flex;
+    align-items: stretch;
 }
 .blockDragger:hover {
     background: #E5E5E5;
+}
+
+.blockDragger:before {
+    content: '⁞⁞';
+    width: 1em;
+    letter-spacing: 0em;
+    color: white;
+    display:inline-block;
+    background-color: #377b91;
+    padding-left: 0.15rem;
+    padding-right: 0.1rem;
+    margin-right: 0.1rem;
+    padding-top: 0.1rem;
+}
+
+#dataBlocks .blockDragger:before {
+    background-color: #4B814B;
 }
 
 .info, #pipes .delete, .tagremove, .tagadd, .edit, .descedit {
@@ -478,13 +508,8 @@ a.pure-button-primary {
 }
 
 #pipes .delete {
-    float: right;
-    margin-right: 0.5em;
-}
-
-.title {
-    position: relative;
-    left: 1.5em;
+    color: white;
+    cursor: pointer;
 }
 
 .tagremove {
@@ -515,15 +540,14 @@ a.pure-button-primary {
 }
 
 .removeZone#blocks:before {
-    content: "\f2ed";
+    content: "🗑";
     color: grey;
-	font-family: 'Font Awesome 5 Free';
     font-size: 40px;
     padding-left: 80px;
     padding-top: 25%;
     display: block;
     height: 100%;
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 200px;
@@ -592,6 +616,9 @@ a.pure-button-primary {
     background: #ef5555;
     color: white;
     border-radius: 3px 3px 0 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.3em;
 }
 
 #pipes.public dd:nth-child(2) {
@@ -758,11 +785,10 @@ button.inspect {
 }
 
 #scrollSignal {
-    font-size: 1.5em;
+    height: 2rem;
     color: #bbd1e4;
     margin: auto;
     position: absolute;
-    width: 1%;
     bottom: 2%;
     left: 0;
     right: 0;
@@ -797,26 +823,34 @@ button.inspect {
     margin-bottom: 0.5em;
 }
 
+#dangerSettings {
+    border: 1px solid #efc2b0;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    padding: 0.5em;
+}
+
 .likes {
     float: left;
     margin-left: 0.3em;
+    white-space: nowrap;
 }
 
-.likes i:hover {
+.likes svg:hover {
     color: #F34E4E;
     cursor: pointer;
 }
 
-.likes i.filled {
+.likes svg.filled {
     color: #F34E4E;
 }
 
-.own_pipe .likes i.filled {
+.own_pipe .likes svg.filled {
     color: white;
 }
 
 
-.own_pipe .likes i:hover {
+.own_pipe .likes svg:hover {
     color: white;
     pointer-events: none;
     cursor: default;
@@ -836,6 +870,9 @@ button.inspect {
   margin-right: 0.1em;
   -webkit-transition: color 0.2s;
   font-size: 0.9em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1em;
 }
 
 .tag::before {
@@ -875,6 +912,13 @@ a:focus .tag {
 #tagsearch button {
     vertical-align: baseline;
 }
+
+.feather {
+    height: 1em;
+    width: 1em;
+    vertical-align: text-top;
+}
+
 
 /*
  * -- BANNER --
@@ -1104,4 +1148,59 @@ hr {
     display: block;
 }
 
+#blocks .details-tab {
+    order: 0;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+    margin-bottom: 0.4rem;
+    margin-right: 0.3rem;
+    margin-left: 0.3rem;
+}
+
+#blocks.details-tab:hover, #blocks .details-tab:focus {
+    border-color: #fff;
+}
+
+#blocks .details-tab::-details-marker {
+    display: none;
+}
+
+#blocks .details-tabs {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    width: 190px;
+    justify-content: center;
+    margin-left: 0.3rem;
+    border: 1px solid #90B6C2;
+    background: #f0f1f2;
+}
+
+#blocks .tab-control:not(.pure-button-active) {
+    border: 1px solid #c2cad3;
+    box-shadow: 2px 2px 8px #c1cdd7;
+}
+
+#blocks .details-tab .pure-button-active {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset,0 0 6px rgba(46, 56, 72, 0.35) inset;
+}
+
+#blocks .details-content {
+    order: 1;
+    padding-left: 0.1rem;
+    width: 100%;
+    background: #f0f1f2;
+}
+
+#blocks .details-item {
+    display: contents;
+}
+
+@supports selector(::details-content) {
+    .details-item[open]::details-content {
+        display: contents;
+    }
 }

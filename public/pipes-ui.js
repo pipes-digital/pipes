@@ -109,6 +109,7 @@ function connect(connector1, connector2) {
     if (connector1.constructor.name == 'Output' && connector1.block.growingOutputs && connector1.block.outputsFull()) {
         connector1.block.growOutputs();
     }
+    setTimeout(() => connector2.block.autofill(connector1.block.id), 100); // delayed so that all connections are set, on init
 }    
 
 function showRemovezone() {
@@ -143,17 +144,23 @@ function showOutput(block) {
         pipe: JSON.stringify(serialize())
     }
     var log = viewer.querySelector('#log');
-    log.innerHTML = '<i class="fa fa-cog fa-spin"></i> Loading...';
+    log.innerHTML = '<img src="/icons/loader.svg"></img> Loading...';
     viewer.style.display = 'block';
     viewer.dataset['controller'] = block.id;
     viewer.style.left = block.x + block.startlx - ((600 - block.width) / 2) + 'px';
     viewer.style.top = block.y + block.startly + block.height + 52 + 'px';
     postAjax(url, data, function(response) {
-            LoadXMLString(log, response);
-            // catch parse error in FF || in blink
-            var nodes = log.querySelectorAll('.NodeName');
-            if ((nodes.length > 1 && nodes[0].innerHTML == 'parsererror') || (nodes.length > 4 && nodes[4].innerHTML == 'parsererror')) {
-                log.innerHTML = escapeHtml(vkbeautify.xml(response, 2));
+            try {
+                response = JSON.parse(response);
+                log.innerHTML = escapeHtml(vkbeautify.json(JSON.stringify(response.data), 2));
+            } catch (e) {
+                // not JSON, might be XML
+                LoadXMLString(log, response);
+                // catch parse error in FF || in blink
+                var nodes = log.querySelectorAll('.NodeName');
+                if ((nodes.length > 1 && nodes[0].innerHTML == 'parsererror') || (nodes.length > 4 && nodes[4].innerHTML == 'parsererror')) {
+                    log.innerHTML = escapeHtml(vkbeautify.xml(response, 2));
+                }
             }
         },
         function(errormsg, code) {
@@ -189,7 +196,7 @@ function relCanvasY(posY) {
     return (Number(r.canvas.getAttribute('data-y') || 0) + posY)
 }
 
-
+var autocompleteRunning = false
 function Block(inputAmount, outputAmount, x, y, name, width, height) {
     var that = this,
     lx = 0,
@@ -238,11 +245,12 @@ function Block(inputAmount, outputAmount, x, y, name, width, height) {
     this.title = r.text(this.x + (width / 2), this.y - 12, name);
     this.title.attr({'font-size': 20});
     this.deco.push(this.titleBox);
-    this.titleEdit = r.text(this.x + (width - 10), this.y - 12, '✎');
-    this.titleEdit.attr({'font-size': 20})
+    this.titleEdit = r.text(this.x + (width - 10), this.y - 10, '🖉');
+    this.titleEdit.attr({'font-size': 15})
     this.deco.push(this.titleEdit);
 
     this.dropzone = []; // used in the foreach block
+    this.autofillData = []; // used for custom implementations of autofill
 
     this.titleEdit.click(function() {
         vex.dialog.prompt({
@@ -260,11 +268,13 @@ function Block(inputAmount, outputAmount, x, y, name, width, height) {
 
     this.setName = function(data) {
         that.name = data;
+        newTitle = r.text(that.x + (width / 2), that.y - 12, data);
+        newTitle.transform('T' + that.startlx + ',' + that.startly);
+        newTitle.attr({'font-size': 20});
+        newTitle.drag(move, start, end).onDragOver( function(hovered) { collide(hovered, that);});
+        newTitle.insertAfter(that.title)
         that.title.remove();
-        that.title = r.text(that.x + (width / 2), that.y - 12, data);
-        that.title.transform('T' + that.startlx + ',' + that.startly);
-        that.title.attr({'font-size': 20});
-        that.title.drag(move, start, end).onDragOver( function(hovered) { collide(hovered, that);});
+        that.title = newTitle;
     };
      
     this.inspector.click(function() {
@@ -569,6 +579,45 @@ function Block(inputAmount, outputAmount, x, y, name, width, height) {
 
         return {type: this.constructor.name, x: x, y: y, id: this.id, userinputValues: userinputValues, oldConnections: oldConnections, name: this.name}
     }
+    // If the specific block has autofilled inputs, this gets the outline data from the server
+    // and calls the block implementation of autofillInputs
+    this.autofill = function(originId) {
+        if (typeof that.autofillInputs !== 'undefined') {
+            if (autocompleteRunning) {
+                setTimeout(() => {
+                    that.autofill(originId)
+                }, 100);
+            } else {
+                autocompleteRunning = true;
+                
+                // 1. Get autofill outline from server
+                var url = '/block/' + originId;
+                var data = {
+                    pipe: JSON.stringify(serialize())
+                }
+
+                postAjax(url, data, function(response) {
+                        try {
+                            response = JSON.parse(response);
+                            that.autofillData = response.paths;
+                            // 2. Call autofillInputs
+                            that.autofillInputs();
+                        } catch (e) {
+                            console.log('automplete error:');
+                            console.log(e);
+                            // Nothing to do. 
+                        }
+                        autocompleteRunning = false;
+                    },
+                    function(errormsg, code) {
+                        // TODO: Show visible error
+                        console.log(errormsg);
+                        autocompleteRunning = false;
+                    }
+                );
+            }
+        }
+    }
 }
 
 var foreachtarget = null;
@@ -656,6 +705,35 @@ function DownloadBlock(x, y) {
     this.foreachable = true;
 }
 
+function WateredDownloadBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Download', 200, 100);
+    this.userinputs[0].type = 'url';
+    this.userinputs[0].required = true;
+    this.userinputs[0].style.width = '150px';
+    this.userinputs[0].placeholder = 'https://...';
+
+    var userinput = document.createElement('input');
+    userinput.type = 'checkbox';
+    userinput.disabled = true;
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 70);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 70 + 'px';
+    userinput.name = 'js';
+    document.querySelector('#program').appendChild(userinput);
+    this.deco.push(r.text(x + 50, y + 77, 'Execute JavaScript' ).attr({'text-anchor': 'start'}));
+    
+    if (pipesPlan) {
+        // user is on a paid plan
+        userinput.disabled = false;
+    }
+    this.userinputs.push(userinput);
+
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+}
+
 function CombineBlock(x, y) {
     Block.call(this, 5, 1, x, y, 'Combine', 150, 200);
     this.userinputs[0].type = 'hidden';
@@ -663,6 +741,12 @@ function CombineBlock(x, y) {
 }
 
 function DuplicateBlock(x, y) {
+    Block.call(this, 1, 5, x, y, 'Duplicate', 150, 200);
+    this.userinputs[0].type = 'hidden';
+    this.growingOutputs = true;
+}
+
+function WateredDuplicateBlock(x, y) {
     Block.call(this, 1, 5, x, y, 'Duplicate', 150, 200);
     this.userinputs[0].type = 'hidden';
     this.growingOutputs = true;
@@ -775,7 +859,6 @@ function sector(cx, cy, radius, startAngle, endAngle, params) {
     return r.path(["M", cx, cy, "L", x1, y1, "A", radius, radius, 0, +(endAngle - startAngle > 180), 0, x2, y2, "z"]).attr(params);
 }
 
-
 function FilterBlock(x, y) {
     Block.call(this, 1, 1, x, y, 'Filter', 200, 150);
     this.userinputs[0].style.width = '150px';
@@ -805,6 +888,9 @@ function FilterBlock(x, y) {
     var summary = document.createElement('option');
     summary.value = 'summary';
     summary.text = 'item.summary';
+    var description = document.createElement('option');
+    description.value = 'description';
+    description.text = 'item.description';
     var title = document.createElement('option');
     title.value = 'title';
     title.text = 'item.title';
@@ -820,6 +906,7 @@ function FilterBlock(x, y) {
     field.appendChild(all);
     field.appendChild(content);
     field.appendChild(summary);
+    field.appendChild(description);
     field.appendChild(title);
     field.appendChild(link);
     field.appendChild(category);
@@ -838,8 +925,221 @@ function FilterBlock(x, y) {
     this.deco.push(r.text(x + 50, y + 122, 'block found items' ).attr({'text-anchor': 'start'}));
 }
 
+function WateredFilterBlock(x, y) {
+    Block.call(this, 1, 1, x, y, 'Filter (structured)', 475, 130);
+    this.userinputs[0].style.width = '425px';
+    this.userinputs[0].required = true;
+    this.userinputs[0].placeholder = 'Filter this';
+    var textinput = new TextInput(x + 29, y + 36, this);
+    this.textinputs.push(textinput);
+    var textinput = new TextInput(x + 29, y + 91, this);
+    this.textinputs.push(textinput);
+    var textinput = new TextInput(x + 304, y + 91, this);
+    this.textinputs.push(textinput);
+    
+    var userinput = document.createElement('input');
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 75);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 75 + 'px';
+    userinput.style.width = '150px';
+    userinput.name = 'field';
+    userinput.placeholder = 'when this';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+
+    var userinput = document.createElement('input');
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 305);
+    userinput.setAttribute('data-yoffset', 75);
+    userinput.style.left = x + 305 + 'px';
+    userinput.style.top = y + 75 + 'px';
+    userinput.style.width = '150px';
+    userinput.name = 'keyword';
+    userinput.placeholder = 'that';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+
+
+    var userinput = document.createElement('select');
+    
+    var contains = document.createElement('option');
+    contains.value = 'contains';
+    contains.text = 'contains';
+    var misses = document.createElement('option');
+    misses.value = 'misses';
+    misses.text = 'misses';
+    var regexp = document.createElement('option');
+    regexp.value = 'regexp';
+    regexp.text = 'regexp';
+    
+    userinput.appendChild(contains);
+    userinput.appendChild(misses);
+    userinput.appendChild(regexp);
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 185);
+    userinput.setAttribute('data-yoffset', 75);
+    userinput.style.left = x + 185 + 'px';
+    userinput.style.top = y + 75 + 'px';
+    userinput.style.width = '100px';
+    userinput.name = 'field';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+    
+    this.deco.push(r.text(x + 30, y + 67, 'remove when:' ).attr({'text-anchor': 'start'}));
+    // Will be called when a block connects to this block. 
+    this.autofillInputs = function() {
+        const datalist = document.createElement('datalist');
+        datalist.id = 'paths' + this.id;
+        for (const item of this.autofillData) {
+            datalist.appendChild(new Option(item,item));
+        }
+        oldList = document.querySelector('#paths' + this.id);
+            if (oldList != null) {
+                oldList.remove()
+            }
+        document.querySelector('#program').appendChild(datalist);
+        this.userinputs[0].setAttribute('list', datalist.id);
+        // to init autocomplete of the second field on page load:
+        this.userinputs[0].dispatchEvent(new Event("blur"));
+    }
+    
+    this.userinputs[0].addEventListener('blur', (event) => {
+        if (this.userinputs[0].list) {
+            // Autocomplete was initialized, now adapt the subfield autocomplete to the selected
+            // field
+            const datalist = document.createElement('datalist');
+            datalist.id = 'subpaths' + this.id;
+            for (const item of this.autofillData) {
+                if (item.startsWith(this.userinputs[0].value)) {
+                                                                              // +1 for the dot
+                    var target = item.substring(this.userinputs[0].value.length);
+                    if (target.startsWith('[*].')) {
+                        target = target.substring(4);
+                    }
+                    datalist.appendChild(new Option(target,target));
+                }
+            }
+            // in case there was one already we remove it
+            oldList = document.querySelector('#subpaths' + this.id);
+            if (oldList != null) {
+                oldList.remove()
+            }
+            document.querySelector('#program').appendChild(datalist);
+            this.userinputs[1].setAttribute('list', datalist.id);
+        }
+    })
+}
+
+function FilterlangBlock(x, y) {
+    Block.call(this, 1, 1, x, y, 'Filter Language', 200, 150);
+    this.userinputs[0].remove();
+    
+    var languages = document.createElement('select');
+    const langOptions = ['chinese', 'english', 'german', 'finnish', 'french', 'italian', 'russian', 'spanish', 'turkish'];
+    for (const language of langOptions) {
+        let temp = document.createElement('option');
+        temp.value = language;
+        temp.text = language;
+        languages.appendChild(temp);
+    }
+    
+    languages.style.position = 'absolute';
+    languages.setAttribute('data-xoffset', 30);
+    languages.setAttribute('data-yoffset', 30);
+    languages.style.left = x + 30 + 'px';
+    languages.style.top = y + 30 + 'px';
+    languages.style.width = '150px';
+    languages.name = 'languages';
+
+    this.userinputs[0] = languages
+    document.querySelector('#program').appendChild(languages);
+    var userinput = document.createElement('input');
+    userinput.type = 'checkbox';
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 115);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 115 + 'px';
+    userinput.name = 'block';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+    
+    var field = document.createElement('select');
+    var all = document.createElement('option');
+    all.value = 'all';
+    all.text = 'all';
+    var content = document.createElement('option');
+    content.value = 'content';
+    content.text = 'item.content';
+    var summary = document.createElement('option');
+    summary.value = 'summary';
+    summary.text = 'item.summary';
+    var description = document.createElement('option');
+    description.value = 'description';
+    description.text = 'item.description';
+    var title = document.createElement('option');
+    title.value = 'title';
+    title.text = 'item.title';;
+    field.appendChild(all);
+    field.appendChild(content);
+    field.appendChild(summary);
+    field.appendChild(description);
+    field.appendChild(title);
+    field.style.position = 'absolute';
+    field.setAttribute('data-xoffset', 30);
+    field.setAttribute('data-yoffset', 75);
+    field.style.left = x + 30 + 'px';
+    field.style.top = y + 75 + 'px';
+    field.style.width = '150px';
+    field.name = 'field';
+    document.querySelector('#program').appendChild(field);
+    this.userinputs.push(field)
+    
+    this.deco.push(r.text(x + 30, y + 67, 'search in fields:' ).attr({'text-anchor': 'start'}));
+    this.deco.push(r.text(x + 30, y + 23, 'filter language:' ).attr({'text-anchor': 'start'}));
+    this.deco.push(r.text(x + 50, y + 122, 'remove items in this language' ).attr({'text-anchor': 'start'}));
+}
+
+function ShortenBlock(x, y) {
+    Block.call(this, 1, 1, x, y, 'Shorten', 200, 150);
+    this.userinputs[0].style.width = '150px';
+    this.userinputs[0].required = true;
+    this.userinputs[0].placeholder = '200';
+    this.userinputs[0].type = 'number';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    
+    var field = document.createElement('select');
+    var content = document.createElement('option');
+    content.value = 'content';
+    content.text = 'item.content';
+    var summary = document.createElement('option');
+    summary.value = 'summary';
+    summary.text = 'item.summary';
+    var title = document.createElement('option');
+    title.value = 'title';
+    title.text = 'item.title';
+   
+    field.appendChild(content);
+    field.appendChild(summary);
+    field.appendChild(title);
+    field.style.position = 'absolute';
+    field.setAttribute('data-xoffset', 30);
+    field.setAttribute('data-yoffset', 75);
+    field.style.left = x + 30 + 'px';
+    field.style.top = y + 75 + 'px';
+    field.style.width = '150px';
+    field.name = 'field';
+    document.querySelector('#program').appendChild(field);
+    this.userinputs.push(field)
+    
+    this.deco.push(r.text(x + 30, y + 67, 'search in fields:' ).attr({'text-anchor': 'start'}));
+}
+
 function ReplaceBlock(x, y) {
-    Block.call(this, 1, 1, x, y, 'Replace', 200, 100);
+    Block.call(this, 1, 1, x, y, 'Replace', 200, 150);
     this.userinputs[0].style.width = '150px';
     this.userinputs[0].required = true;
     this.userinputs[0].placeholder = 'keyword';
@@ -856,11 +1156,104 @@ function ReplaceBlock(x, y) {
     document.querySelector('#program').appendChild(userinput);
     this.userinputs.push(userinput)
 
+    var field = document.createElement('select');
+    var all = document.createElement('option');
+    all.value = 'all';
+    all.text = 'all (except guid)';
+    var content = document.createElement('option');
+    content.value = 'content';
+    content.text = 'item.content';
+    var summary = document.createElement('option');
+    summary.value = 'summary';
+    summary.text = 'item.summary';
+    var title = document.createElement('option');
+    title.value = 'title';
+    title.text = 'item.title';
+    var guid = document.createElement('option');
+    guid.value = 'guid';
+    guid.text = 'item.guid';
+    field.appendChild(all);
+    field.appendChild(content);
+    field.appendChild(summary);
+    field.appendChild(title);
+    field.appendChild(guid);
+    field.style.position = 'absolute';
+    field.setAttribute('data-xoffset', 30);
+    field.setAttribute('data-yoffset', 100);
+    field.style.left = x + 30 + 'px';
+    field.style.top = y + 100 + 'px';
+    field.style.width = '150px';
+    field.name = 'field';
+
+    document.querySelector('#program').appendChild(field);
+    this.userinputs.push(field)
+    
+    this.deco.push(r.text(x + 30, y + 67, 'replace in fields:' ).attr({'text-anchor': 'start'}));
+
     var textinput = new TextInput(x + 29, y + 37, this);
     this.textinputs.push(textinput);
 
     var textinput = new TextInput(x + 29, y + 77, this);
     this.textinputs.push(textinput); 
+}
+
+function WateredReplaceBlock(x, y) {
+    Block.call(this, 1, 1, x, y, 'Replace (structured)', 400, 150);
+    this.userinputs[0].style.width = '250px';
+    this.userinputs[0].required = true;
+    this.userinputs[0].placeholder = 'keyword';
+    var userinput = document.createElement('input');
+    userinput.type = 'text';
+    userinput.style.width = '250px';
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 60);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 60 + 'px';
+    userinput.name = 'replace';
+    userinput.placeholder = 'replacement';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+
+    var userinput = document.createElement('input');
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 100);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 100 + 'px';
+    userinput.style.width = '350px';
+    userinput.name = 'field';
+    userinput.placeholder = 'where';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+    
+    this.deco.push(r.text(x + 30, y + 67, 'replace in fields:' ).attr({'text-anchor': 'start'}));
+
+    var textinput = new TextInput(x + 29, y + 36, this);
+    this.textinputs.push(textinput);
+
+    var textinput = new TextInput(x + 29, y + 76, this);
+    this.textinputs.push(textinput);
+    
+    var textinput = new TextInput(x + 29, y + 116, this);
+    this.textinputs.push(textinput);
+
+     // Will be called when a block connects to this block. 
+    this.autofillInputs = function() {
+        const datalist = document.createElement('datalist');
+        datalist.id = 'paths' + this.id;
+        for (const item of this.autofillData) {
+            datalist.appendChild(new Option(item,item));
+        }
+        oldList = document.querySelector('#paths' + this.id);
+        if (oldList != null) {
+            oldList.remove()
+        }
+        document.querySelector('#program').appendChild(datalist);
+        this.userinputs[2].setAttribute('list', datalist.id);
+        // to init autocomplete on page load:
+        this.userinputs[2].dispatchEvent(new Event("blur")) 
+    }
 }
 
 function ExtractBlock(x, y) {
@@ -895,8 +1288,9 @@ function ExtractBlock(x, y) {
     this.deco.push(r.text(x + 50, y + 107, 'Start at item.content' ).attr({'text-anchor': 'start'}));
     
     var userinput = document.createElement('button');
-    var icon = document.createElement('i');
-    icon.className = "extractorui fas fa-crosshairs";
+    var icon = document.createElement('img');
+    icon.className = "extractorui feather";
+    icon.src = "/icons/crosshair.svg";
     userinput.appendChild(icon);
     userinput.style.position = 'absolute';
     userinput.setAttribute('data-xoffset', 180);
@@ -911,6 +1305,7 @@ function ExtractBlock(x, y) {
     this.userinputs.push(userinput);
     
     document.querySelector('#program').appendChild(userinput);
+    SVGInject(icon);
 
     var textinput = new TextInput(x + 29, y + 37, this);
     this.textinputs.push(textinput);
@@ -921,6 +1316,11 @@ function ExtractBlock(x, y) {
 
 function UniqueBlock(x, y) {
     Block.call(this, 1, 1, x, y, 'Unique', 150, 100);
+    this.userinputs[0].type = 'hidden';
+}
+
+function TabletojsonBlock(x, y) {
+    Block.call(this, 1, 1, x, y, 'Tables to JSON', 150, 100);
     this.userinputs[0].type = 'hidden';
 }
 
@@ -951,7 +1351,7 @@ function TruncateBlock(x, y) {
 }
 
 function BuilderBlock(x, y) {
-    Block.call(this, 4, 1, x, y, 'Build Feed', 150, 220);
+    Block.call(this, 4, 1, x, y, 'Build Feed', 170, 260);
     this.userinputs[0].placeholder = "feed title";
     this.deco.push(r.path("M" + (x + 2) + " " + (y + 95) + "H" + (x + 50)  ));
     this.deco.push(r.path("M" + (x + 2) + " " + (y + 130) + "H" + (x + 50)  ));
@@ -966,6 +1366,19 @@ function BuilderBlock(x, y) {
 
     var textinput = new TextInput(x + 29, y + 37, this);
     this.textinputs.push(textinput);
+
+    var userinput = document.createElement('input');
+    userinput.type = 'checkbox';
+    userinput.style.position = 'absolute';
+    userinput.setAttribute('data-xoffset', 30);
+    userinput.setAttribute('data-yoffset', 225);
+    userinput.style.left = x + 30 + 'px';
+    userinput.style.top = y + 225 + 'px';
+    userinput.name = 'block';
+    document.querySelector('#program').appendChild(userinput);
+    this.userinputs.push(userinput)
+
+    this.deco.push(r.text(x + 50, y + 232, 'Recalculate GUID' ).attr({'text-anchor': 'start'}));
 }
 
 function WebhookBlock(x, y) {
@@ -981,10 +1394,10 @@ function SortBlock(x, y) {
     var sortorder = document.createElement('select');
     var asc = document.createElement('option');
     asc.value = 'asc';
-    asc.text = 'Oldest | A-Z';
+    asc.text = 'Oldest First | A-Z';
     var desc = document.createElement('option');
     desc.value = 'desc';
-    desc.text = 'Newest | Z-A';
+    desc.text = 'Newest First | Z-A';
     sortorder.appendChild(desc);
     sortorder.appendChild(asc);
     sortorder.style.position = 'absolute';
@@ -1081,6 +1494,125 @@ function TwitterBlock(x, y) {
     this.foreachable = true;
 }
 
+function PeriscopeBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Periscope', 150, 100);
+    this.userinputs[0].placeholder = 'user/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function MixcloudBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Mixcloud', 150, 100);
+    this.userinputs[0].placeholder = 'channel/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function UstreamBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Ustream', 150, 100);
+    this.userinputs[0].placeholder = 'channel/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function SpeedrunBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Speedrun', 150, 100);
+    this.userinputs[0].placeholder = 'game/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function DailymotionBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Dailymotion', 150, 100);
+    this.userinputs[0].placeholder = 'channel/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function SvtplayBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'SVT Play', 150, 100);
+    this.userinputs[0].placeholder = 'program/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function VimeoBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Vimeo', 150, 100);
+    this.userinputs[0].placeholder = 'channel/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function TwitchBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Twitch', 150, 100);
+    this.userinputs[0].placeholder = 'user/url';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function RedditBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Reddit', 150, 100);
+    this.userinputs[0].placeholder = 'subreddit';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+}
+
+function SoundcloudBlock(x, y) {
+    Block.call(this, 0, 1, x, y, 'Soundcloud', 200, 125);
+    this.userinputs[0].placeholder = 'user';
+    this.userinputs[0].style.width = '150px';
+    var textinput = new TextInput(x + 29, y + 37, this);
+    this.textinputs.push(textinput);
+    this.foreachable = true;
+
+    var datatypes = document.createElement('select');
+    var all = document.createElement('option');
+    all.value = 'all';
+    all.text = 'All (except likes)';
+    var tracks = document.createElement('option');
+    tracks.value = 'tracks';
+    tracks.text = 'Tracks';
+    var albums = document.createElement('option');
+    albums.value = 'albums';
+    albums.text = 'Albums';
+    var playlists = document.createElement('option');
+    playlists.value = 'playlists';
+    playlists.text = 'Playlists';
+    var reposts = document.createElement('option');
+    reposts.value = 'reposts';
+    reposts.text = 'Reposts';
+    var likes = document.createElement('option');
+    likes.value = 'likes';
+    likes.text = 'Likes';
+
+    datatypes.appendChild(all);
+    datatypes.appendChild(tracks);
+    datatypes.appendChild(albums);
+    datatypes.appendChild(playlists);
+    datatypes.appendChild(reposts);
+    datatypes.appendChild(likes);
+
+    datatypes.style.position = 'absolute';
+    datatypes.setAttribute('data-xoffset', 30);
+    datatypes.setAttribute('data-yoffset', 60);
+    datatypes.style.left = x + 30 + 'px';
+    datatypes.style.top = y + 60 + 'px';
+    datatypes.style.width = '150px';
+    datatypes.name = 'datatypes';
+
+    this.userinputs.push(datatypes);
+    document.querySelector('#program').appendChild(datatypes);
+}
+
 function MergeBlock(x, y) {
     Block.call(this, 2, 1, x, y, 'Merge Items', 150, 100);
     this.userinputs[0].placeholder = 'format';
@@ -1119,28 +1651,43 @@ function OutputBlock() {
     this.userinputs[0].type = 'hidden';
     this.base.hide();
     this.title.hide();
+    this.titleEdit.hide();
     this.id = 'output';
     this.inspectorTitle.remove();
 }
 
 var compatibleGlows = [];
 function isCompatible(from, to) {
+    if (from.constructor.name == 'Input' || from.constructor.name == 'PipeOutput') {
+        // Be consistent in the order: We always think from output to input, even if users drags an input
+        var temp = to;
+        to = from;
+        from = temp;
+    }
     var blockCompatible = true;
-    if (from.block.constructor.name == 'DownloadBlock' || to.block.constructor.name == 'DownloadBlock') {
+    if (from.block.constructor.name == 'DownloadBlock') {
         blockCompatible = (from.block.constructor.name == 'ExtractBlock' || from.block.constructor.name == 'BuilderBlock' || to.block.constructor.name == 'ExtractBlock' || to.block.constructor.name == 'BuilderBlock' || from.constructor.name == 'PipeOutput' || to.constructor.name == 'PipeOutput' || from.constructor.name == 'TextInput' || to.constructor.name == 'TextInput' || from.block.constructor.name == 'ImagesBlock' || to.block.constructor.name == 'ImagesBlock')
     }
+
+    // Water blocks can use regular blocks as input, but not the other way around
+    var waterDirection = true;
+    if (from.block.constructor.name.startsWith('Water') || to.block.constructor.name.startsWith('Water')) {
+       // Either both are water blocks or only the to block is a water block
+       waterDirection = ((from.block.constructor.name.startsWith('Water') && to.block.constructor.name.startsWith('Water')) || ((! from.block.constructor.name.startsWith('Water')) && to.block.constructor.name.startsWith('Water')) || to.constructor.name == 'PipeOutput')
+    }
+    
     
     return (blockCompatible &&
     from
-    &&  ((to.constructor.name == 'Output' && (from.constructor.name == 'Input' || from.constructor.name == 'PipeOutput'))
-        ||
+    &&  (
         ((to.constructor.name == 'Input' || to.constructor.name == 'PipeOutput') && from.constructor.name == 'Output')
         ||
         (to.constructor.name == 'TextOutput' && from.constructor.name == 'TextInput')
         ||
         (to.constructor.name == 'TextInput' && from.constructor.name == 'TextOutput')
         )
-    && to.block != from.block)
+    && to.block != from.block
+    && waterDirection)
 }
 
 function unmarkCompatible() {
@@ -1324,8 +1871,8 @@ function TextInput(x, y, block) {
 
 function PipeOutput(x, y, block) {
     Input.call(this, x, y, block, 0);
-    var color = "#7F1A0C"
-    this.base.attr({fill: color, stroke: color, "fill-opacity": 0, "stroke-width": 2, cursor: "move"});
+    var color = Raphael.getColor();
+    this.base.attr({fill: color, stroke: color, "fill-opacity": 0, "stroke-width": 2, cursor: "grab"});
     this.title = r.text(x, y - 26, 'Out');
     this.title.attr({'font-size': 20});
     this.title.attr({fill: color, stroke: color, cursor: "default"})
@@ -1445,6 +1992,57 @@ function createBlock(type, x, y) {
         case 'ImagesBlock':
             blocks.push(new ImagesBlock(x, y));
             break;
+        case 'ShortenBlock':
+            blocks.push(new ShortenBlock(x, y));
+            break;
+        case 'PeriscopeBlock':
+            blocks.push(new PeriscopeBlock(x, y));
+            break;
+        case 'MixcloudBlock':
+            blocks.push(new MixcloudBlock(x, y));
+            break;
+        case 'UstreamBlock':
+            blocks.push(new UstreamBlock(x, y));
+            break;
+        case 'SpeedrunBlock':
+            blocks.push(new SpeedrunBlock(x, y));
+            break;
+        case 'SoundcloudBlock':
+            blocks.push(new SoundcloudBlock(x, y));
+            break;
+        case 'SvtplayBlock':
+            blocks.push(new SvtplayBlock(x, y));
+            break;
+        case 'DailymotionBlock':
+            blocks.push(new DailymotionBlock(x, y));
+            break;
+        case 'VimeoBlock':
+            blocks.push(new VimeoBlock(x, y));
+            break;
+        case 'TwitchBlock':
+            blocks.push(new TwitchBlock(x, y));
+            break;
+        case 'RedditBlock':
+            blocks.push(new RedditBlock(x, y));
+            break;
+        case 'TabletojsonBlock':
+            blocks.push(new TabletojsonBlock(x, y));
+            break;
+        case 'FilterlangBlock':
+            blocks.push(new FilterlangBlock(x, y));
+            break;
+        case 'WateredFilterBlock':
+            blocks.push(new WateredFilterBlock(x, y));
+            break;
+        case 'WateredDownloadBlock':
+            blocks.push(new WateredDownloadBlock(x, y));
+            break;
+        case 'WateredDuplicateBlock':
+            blocks.push(new WateredDuplicateBlock(x, y));
+            break;
+        case 'WateredReplaceBlock':
+            blocks.push(new WateredReplaceBlock(x, y));
+            break;
     }
 }
 
@@ -1548,13 +2146,20 @@ function getAjax(url, success, failure) {
 
 function setFeedLink(pipeid) {
     if (document.querySelector('#outputFeed') == undefined) {
-        var sidebar = document.querySelector('#blocks');
         var a = document.createElement("a");
         a.href = '/feedpreview/' + pipeid;
         a.target = '_blank';
         a.id = 'outputFeed';
-        a.text = 'Pipe Output';
-        sidebar.appendChild(a);
+        a.title = 'Pipe Output';
+        var b = document.createElement("button");
+        b.className = 'pure-button';
+        var i = document.createElement("img");
+        i.src = '/icons/download-cloud.svg';
+        SVGInject(i);
+        b.appendChild(i);
+        a.appendChild(b);
+        document.querySelector('#blocks h2').insertAdjacentElement('beforebegin', a);
+        
     }
 }
 
@@ -1570,29 +2175,41 @@ function save(fork) {
         id: document.querySelector('main').dataset.pipeid,
         preview: document.querySelector('#program svg').innerHTML
     }
+    document.querySelector('form').reportValidity();
+    var saveButton = document.querySelector('#save');
+    var origIcon = saveButton.firstChild.cloneNode(true);
+    var loader = document.createElement('img');
+    loader.src = '/icons/loader.svg';
+    
+    saveButton.replaceChildren(loader)
+    SVGInject(loader);
+    
     postAjax('/pipe',
                 data,
-                function (response) { setFeedId(response); setFeedLink(response); localStorage.setItem('pipeid', response); saveFeedback();
+                function (response) { setFeedId(response); setFeedLink(response); localStorage.setItem('pipeid', response);
+                    var successIcon = document.createElement('img');
+                    successIcon.src = '/icons/check.svg';
+
+                    saveButton.replaceChildren(successIcon)
+                    SVGInject(successIcon);
+                    
+                    window.setTimeout(function() {
+                        saveButton.replaceChildren(origIcon);
+                    }, 2000);
                     if (fork) {
                         window.location = "/editor/" + response;
                     }
                 },
-                function (response) { vex.dialog.alert({
+                function (response) {
+                    window.setTimeout(function() {
+                        saveButton.replaceChildren(origIcon);
+                    }, 2000);
+                    vex.dialog.alert({
                                         message: 'Sorry, it seems like you have no space for pipes left.',
                                     })
                 }
             );
 }
-
-function saveFeedback() {
-    document.querySelector('form').reportValidity();
-    var icon = document.querySelector('#save i');
-    icon.classList.add('show');
-    window.setTimeout(function() {
-        icon.classList.remove('show');
-    }, 2000);
-}
-
 function clear() {
     blocks.forEach(function(elem) {
         if (elem.constructor.name != 'OutputBlock') {
@@ -1634,15 +2251,22 @@ function flashOutput() {
 }
 
 var blockBackground = '#E5E5E5';
-var titleBackground ='#223A36';
-var connectorBackground ='#ADD8E6';
-var textConnectorBackground ='#90EE90';
-var decoColor ='black';
+var titleBackground = '#377b91';
+var waterTitleBackground = '#4B814B';
+var stroke = '#90B6C2';
+var connectorBackground = '#ADD8E6';
+var textConnectorBackground = '#90EE90';
+var decoColor = 'black';
 function styleBlock(block) {
-    block.attr({fill: blockBackground, stroke: titleBackground, "fill-opacity": 1, "stroke-width": 1, cursor: "move"});
-    block.title.attr({fill: 'white', cursor: "move"});
+    block.attr({fill: blockBackground, stroke: stroke, "fill-opacity": 1, "stroke-width": 1, cursor: "grab"});
+    block.title.attr({fill: 'white', cursor: "grab"});
     block.titleEdit.attr({fill: 'white', cursor: "pointer"});
-    block.titleBox.attr({"fill-opacity": 1, stroke: titleBackground, fill: titleBackground, cursor: "move"});
+    if (block.constructor.name.startsWith('Water')) {
+        var useTitleColor = waterTitleBackground;
+    } else {
+        var useTitleColor = titleBackground;
+    }
+    block.titleBox.attr({"fill-opacity": 1, stroke: stroke, fill: useTitleColor, cursor: "grab"});
     block.deco.forEach(function(elem) {
         elem.attr({'stroke-width': 1});
     });
@@ -1700,28 +2324,42 @@ function incrTransform(elem, dx, dy) {
     }
     elem.style.transform = 'translateX(' + (oldTranslateX + dx) + 'px)';
     elem.style.transform += ' translateY('+ (oldTranslateY + dy) + 'px)'
-}
+    // also, hide elements that are no longer visible. That's necessary to supress the scrolling bar
+    if (elem != viewer) {
+        var posX = /(\d+)px/.exec(elem.style.left);
+        posX = Number(posX[1]);
+        var posY = /(\d+)px/.exec(elem.style.top);
+        posY = Number(posY[1]);
+        var x = posX + oldTranslateX + dx;
+        var y = posY + oldTranslateY + dy;
 
-function getOS() {
-    var userAgent = window.navigator.userAgent,
-        platform = window.navigator.platform,
-        macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-        windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-        iosPlatforms = ['iPhone', 'iPad', 'iPod'];
+        var main = document.querySelector('main');
+        var canvasWidth = main.offsetWidth;
+        var canvasHeight = main.offsetHeight;
+        
+        var pruned = false;
+        if (x > canvasWidth) {
+            elem.style.display = 'none';
+            pruned = true;
+        }
+        if (x < 0 ) {
+            elem.style.display = 'none';
+            pruned = true;
+        }
 
-    if (macosPlatforms.indexOf(platform) !== -1) {
-        return 'Mac OS';
-    } else if (iosPlatforms.indexOf(platform) !== -1) {
-        return 'iOS';
-    } else if (windowsPlatforms.indexOf(platform) !== -1) {
-        return 'Windows';
-    } else if (/Android/.test(userAgent)) {
-        return 'Android';
-    } else if (/Linux/.test(platform)) {
-        return 'Linux';
+         if (y > canvasHeight) {
+            elem.style.display = 'none';
+            pruned = true;
+        }
+        if (y < 0 ) {
+            elem.style.display = 'none';
+            pruned = true;
+        }
+
+        if (! pruned) {
+            elem.style.display = 'block';
+        }
     }
-
-    return null;
 }
 
 var oldState = null;
@@ -1779,8 +2417,8 @@ function startExtractorUi(block, extractSelector) {
 
     var button = document.createElement('button');
     button.id = 'overlayclose';
-    var close = document.createElement('i');
-    close.className = 'fas fa-window-close';
+    var close = document.createElement('img');
+    close.src = '/icons/x-square.svg';
     button.appendChild(close);
     button.addEventListener('click', function() {
         this.parentNode.remove();
@@ -1854,6 +2492,7 @@ function startExtractorUi(block, extractSelector) {
     overlay.appendChild(iframe);
 
     document.querySelector('#program').appendChild(overlay);
+    SVGInject(close);
 }
 
 function startGalleryUi(inputBlock, block) {
@@ -1874,8 +2513,9 @@ function startGalleryUi(inputBlock, block) {
 
     var button = document.createElement('button');
     button.id = 'overlayclose';
-    var close = document.createElement('i');
-    close.className = 'fas fa-window-close';
+    var close = document.createElement('img');
+    close.src = '/icons/x-square.svg';
+    SVGInject(close);
     button.appendChild(close);
     button.addEventListener('click', function() {
         this.parentNode.remove();
@@ -1920,6 +2560,8 @@ function startGalleryUi(inputBlock, block) {
     overlay.appendChild(gallery);
 
     document.querySelector('#program').appendChild(overlay);
+    SVGInject(close);
+    
 }
 
 function closeExtractorUI() {
@@ -1978,45 +2620,41 @@ window.onload = function() {
     if (! loaded) {
         flashOutput();
     }
-    
-    var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-    //if (! (isFirefox)) {
-    if (true) {
-        // no longer disable canvas moving in firefox, because of a bug preventing ff to select items in the svg after the viewbox changed seems to be fixed now
-        interact(r.canvas)
-            .draggable({
-                inertia: false,
-                restrict: {
-                    restriction: 'parent',
-                },
-                onmove: function(evt) {
-                    var target = evt.target,
-                    x = (parseFloat(target.getAttribute('data-x')) || 0) - evt.dx,
-                    y = (parseFloat(target.getAttribute('data-y')) || 0) - evt.dy;
-                    
-                    r.setViewBox(x, y, document.querySelector('main').offsetWidth,  document.querySelector('main').offsetHeight, true);
-                    blocks.forEach(function(block, index) {
-                        block.userinputs.forEach(function(elem, index) {
-                            incrTransform(elem, evt.dx, evt.dy)
-                        });
+
+    // Make the canvas dragable
+    interact(r.canvas)
+        .draggable({
+            inertia: false,
+            restrict: {
+                restriction: 'parent',
+            },
+            onmove: function(evt) {
+                var target = evt.target,
+                x = (parseFloat(target.getAttribute('data-x')) || 0) - evt.dx,
+                y = (parseFloat(target.getAttribute('data-y')) || 0) - evt.dy;
+                
+                r.setViewBox(x, y, document.querySelector('main').offsetWidth,  document.querySelector('main').offsetHeight, true);
+                blocks.forEach(function(block, index) {
+                    block.userinputs.forEach(function(elem, index) {
+                        incrTransform(elem, evt.dx, evt.dy)                            
                     });
+                });
 
-                    incrTransform(viewer, evt.dx, evt.dy)
-                    
-                    target.setAttribute('data-x', x);
-                    target.setAttribute('data-y', y);
-                }
-            })
-            .actionChecker(function (pointer, evt, action, interactable, element, interaction) {
-                if (r.getElementByPoint(evt.clientX, evt.clientY) == null) {
-                    return action;
-                }
-                return false;
-            })
-            .styleCursor(false);
-    }
-        
+                incrTransform(viewer, evt.dx, evt.dy)
+                
+                target.setAttribute('data-x', x);
+                target.setAttribute('data-y', y);
+            }
+        })
+        .actionChecker(function (pointer, evt, action, interactable, element, interaction) {
+            if (r.getElementByPoint(evt.clientX, evt.clientY) == null) {
+                return action;
+            }
+            return false;
+        })
+        .styleCursor(false);
 
+    var clone = null;
     interact('.blockDragger')
       .draggable({
         // disable inertial throwing
@@ -2027,9 +2665,10 @@ window.onload = function() {
         },
         // enable autoScroll
         autoScroll: true,
-
         onstart: function (evt) {
-            evt.target.cloneNode(true);
+            clone = evt.target.cloneNode(true);
+            evt.target.parentNode.insertAdjacentElement('afterbegin', clone);
+            evt.target.style.position = 'fixed';    // keep button visible over the canvas
         },
         // call this function on every dragmove event
         onmove: function(evt) {
@@ -2038,10 +2677,11 @@ window.onload = function() {
             x = (parseFloat(target.getAttribute('data-x')) || 0) + evt.dx,
             y = (parseFloat(target.getAttribute('data-y')) || 0) + evt.dy;
 
-            // translate the element
+            // translate the element, corrected for the sidebar scrollbar position (needed because
+            // element has position fixed)
             target.style.webkitTransform =
             target.style.transform =
-              'translate(' + x + 'px, ' + y + 'px)';
+              'translate(' + (x - 150) + 'px, ' + (y - document.querySelector('#blocks').scrollTop)  + 'px)';
 
             // update the posiion attributes
             target.setAttribute('data-x', x);
@@ -2057,14 +2697,19 @@ window.onload = function() {
             evt.target.setAttribute('data-x', 0);
             evt.target.setAttribute('data-y', 0);
 
-            if (evt.pageX > 200) {
+            programHeight = document.querySelector('#program').offsetHeight;
+
+            if (evt.pageX > 200 && evt.pageY < (programHeight + 50)) {
                 var type = data.replace('Dragger', 'Block');
                 type = type.charAt(0).toUpperCase() + type.slice(1);
                 createBlock(type, relCanvasX(evt.pageX), relCanvasY(evt.pageY) - navHeight)
                 styleBlock(blocks.top());
             }
+            evt.target.style.position = 'relative';
+            clone.remove();
         }
-    });
+    })
+    .styleCursor(false);
 
     document.querySelector('#save').addEventListener('click', function() {
         localStorage.setItem('pipe', JSON.stringify(serialize()));
@@ -2114,6 +2759,14 @@ window.onload = function() {
                 localStorage.setItem(evt.target.parentNode.id, 'open');
             }
         }
+        if (evt.target.classList.contains('tab-control')) {
+            evt.preventDefault();
+            evt.target.closest('details').open = true;
+            document.querySelectorAll('#blocks .tab-control').forEach(
+                (elem) => elem.classList.remove('pure-button-active')
+            );
+            evt.target.classList.add('pure-button-active');
+        }
     });
     
     document.querySelector('#inspectorClose').addEventListener('click', function(evt) {
@@ -2146,6 +2799,10 @@ window.onload = function() {
     
     if (localStorage.getItem('menuCreate') == 'open') {
         document.querySelector('#menuCreate').open = true;
+    }
+    
+    if (localStorage.getItem('menuIntegrations') == 'open') {
+        document.querySelector('#menuIntegrations').open = true;
     }
 
     document.addEventListener("keyup", function(event) {

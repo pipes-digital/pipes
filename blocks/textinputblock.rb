@@ -6,7 +6,7 @@ class Textinputblock < Block
             default = self.options[:userinputs][1]
         end
 
-        # TODO: The inspector does not show output of pieps that have textinput blocks. It should use its default
+        # TODO: The inspector does not show output of pipes that have textinput blocks. It should use its default
 
         return default
     end

@@ -4,7 +4,7 @@ class Pipeblock < Block
             hashed_id = self.options[:userinputs][0]
         end
 
-        pipe = Pipe.new(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))
+        pipe = Pipe.new(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: nil)
         return pipe.run
 
     end

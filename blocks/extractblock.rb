@@ -11,7 +11,7 @@ class Extractblock < Block
             extract_content = self.options[:userinputs][2]
         end
 
-        return inputs[0] if selector.empty?
+        return self.errorFeed('Selector missing', 'The extraction block is missing a selector') if selector.empty?
 
         case selector
             when /\/.*/ then mode = 'xml'
@@ -35,8 +35,8 @@ class Extractblock < Block
                         content = content.strip.gsub(/\]\]\z/, '')
                     end
                     doc = Nokogiri::HTML(content)
-                when 'xml' then doc = Nokogiri::XML(content) { |config| config.nonet.noent }
-                when 'json' then doc = JSON.parse(content)
+                when 'xml' then doc = Nokogiri::XML(content.to_s)
+                when 'json' then doc = JSON.parse(content.to_s)
             end
             
             if mode != 'json'
@@ -55,7 +55,7 @@ class Extractblock < Block
         rss = RSS::Maker.make("rss2.0") do |maker|
             maker.channel.updated = Time.now
             maker.channel.title = 'Extracted Content'
-            maker.channel.link = ' '
+            maker.channel.link = ''
             maker.channel.description = ' ' # the rss won't get emitted if description is empty
 
             items.each do |item|
@@ -80,13 +80,14 @@ class Extractblock < Block
                         end
                     end
                     newItem.content_encoded = value
-                    newItem.guid.content = Digest::MD5.hexdigest(value)
+                    newItem.guid.content = Digest::MD5.hexdigest(value.to_s)
                     newItem.guid.isPermaLink = false
+                    newItem.link = ''
                 end
             end
         end
 
-        return rss.to_s
+        return rss
     end
 
 end

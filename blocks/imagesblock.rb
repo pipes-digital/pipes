@@ -9,12 +9,12 @@ class ImagesBlock < Block
             selector = self.options[:userinputs][0]
         end
 
-        if Nokogiri::XML(inputs[0]) { |config| config.nonet.noent }.root.name == 'html'
+        if Nokogiri::XML(inputs[0].to_s).root.name == 'html'
             mode = 'html'
-            contents = [inputs[0]]
+            contents = [inputs[0].to_s]
         else
             mode = 'xml'
-            contents = Nokogiri::XML(inputs[0]) { |config| config.nonet.noent }.xpath('//item/content:encoded').map{|x| x.content }
+            contents = Nokogiri::XML(inputs[0].to_s).xpath('//item/content:encoded').map{|x| x.content }
         end
 
         case mode
@@ -66,7 +66,7 @@ class ImagesBlock < Block
             end
         end
 
-        return rss.to_s
+        return rss
     end
 
 end

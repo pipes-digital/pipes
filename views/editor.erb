@@ -8,14 +8,15 @@
         var pipesPlan = <%= !! plan %>;
     </script>
     <script src="<%= url '/pipes-ui.js' %>"></script>
-    <link rel="stylesheet" href="/css/font-awesome-core.css?v=1">
-    <link rel="stylesheet" href="/css/font-awesome-solid.css?v=1">
+
     <link href="<%= url 'style.css' %>" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/purecss/build/pure-min.css">
+    <link rel="stylesheet" href="/node_modules/purecss/build/grids-responsive-min.css">
+    
+    <script src="/node_modules/vex-js/dist/js/vex.combined.min.js"></script>
     <script>vex.defaultOptions.className = 'vex-theme-wireframe'</script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-wireframe.css" />
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex.css" />
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex-theme-wireframe.css" />
     <script src="<%= url '/interact.min.js' %>"></script>
     <script src="<%= url '/vkBeautify.min.js' %>"></script>
     <script src="<%= url '/XMLDisplay.min.js' %>"></script>
@@ -24,128 +25,222 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#9f00a7">
     <meta name="theme-color" content="#ffffff">
     
 </head>
 <body>
     <noscript>Please enable JavaScript to use Pipes.</noscript>
- 
+    
     <%= erb :nav, :locals => {:current => 'editor'} %>
     
     <div id="editor">
         <aside id="undo"><button class="pure-button" onclick="restoreState();">Undo</button> <span>(Ctrl + Z)</span></aside>
         <aside id="blocks">
-            <button class="pure-button" id="new" title="start a new pipe"><i class="fas fa-file"></i></button>
+            <button class="pure-button" id="new" title="start a new pipe"><img src="/icons/file.svg"></img></button>
+            <button class="pure-button" id="save" title="save"><img src="/icons/save.svg"></img></button>
             <h2>Blocks</h2>
-            <details id="menuInputs"><summary>Inputs</summary>
-                <ol>
-                    <li>
-                    <div class="blockDragger" data-id="feedDragger" draggable="true">Feed </div>
-                    <button class="info" title="Fetch a feed from an URL" data-doc='This is the principal data input for a pipe. Point it directly to an RSS-, Atom- or JSON-feed to fetch its data. You can also point it directly to a webpage - if the feed is properly set as rel="alternate" in the head of the page, this block will find it.<br /><br /><a target="_blank" href="/docs#feed">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="downloadDragger" draggable="true">Download </div>
-                        <button class="info" title="Download a page" data-doc='The difference to the feed block is that this block will not try to find a feed. If it is set to an URL, exactly that URL (following redirects) is fetched. The intended use is to use the extract block with the output of this, and create a new regular feed with the feed builder.<br /><br /><a target="_blank" href="/docs#download">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="webhookDragger" draggable="true">Webhook </div>
-                        <button class="info" title="Receive data from a webhook" data-doc='Receive data from a webhook. The shown URL is your webhook endpoint. Each POST to that endpoint becomes its own item in this blocks output feed.<br /><br /><a target="_blank" href="/docs#webhookblock">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="twitterDragger" draggable="true">Tweets </div>
-                        <button class="info" title="Receive data from twitter" data-doc='Get tweets from twitter. You can either enter a regular search term, a #hashtag or a @username.<br /><br /><a target="_blank" href="/docs#twitterblock">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="textinputDragger" draggable="true">Text Input </div>
-                        <button class="info" title="Dynamically fill other input fields" data-doc='Fill the text input of other blocks. This effectively transforms a Pipe into a re-usable API.<br /><br /><a target="_blank" href="/docs#textinputblock">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <% if authorized? %>
-                        <li>
-                            <div class="blockDragger" data-id="pipeDragger" draggable="true">Pipe</div>
-                            <button class="info" title="Use another pipes as a block" data-doc='Use one of your other pipes as input block in this pipe. This block will output exactly the feed the pipe normally creates, which can be given other blocks as input.<br /><br /><a target="_blank" href="/docs#pipeblock">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                        </li>
+            <div class="details-tabs pure-button-group" id="block_tabs">
+                <details id="rssBlocks" name="tabs" class="details-item" open>
+                    <summary class="details-tab"><a class="pure-button tab-control pure-button-active">RSS</a></summary>
+                    <div class="details-content">
+                    <details id="menuInputs"><summary>Inputs</summary>
+                        <ol>
+                            <li>
+                            <div class="blockDragger" data-id="feedDragger" draggable="true">Feed </div>
+                            <button class="info" title="Fetch a feed from an URL" data-doc='This is the principal data input for a pipe. Point it directly to an RSS-, Atom- or JSON-feed to fetch its data. You can also point it directly to a webpage - if the feed is properly set as rel="alternate" in the head of the page, this block will find it.<br /><br /><a target="_blank" href="/docs#feed">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></img></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="downloadDragger" draggable="true">Download </div>
+                                <button class="info" title="Download a page" data-doc='The difference to the feed block is that this block will not try to find a feed. If it is set to an URL, exactly that URL (following redirects) is fetched. The intended use is to use the extract block with the output of this, and create a new regular feed with the feed builder.<br /><br /><a target="_blank" href="/docs#download">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="webhookDragger" draggable="true">Webhook </div>
+                                <button class="info" title="Receive data from a webhook" data-doc='Receive data from a webhook. The shown URL is your webhook endpoint. Each POST to that endpoint becomes its own item in this blocks output feed.<br /><br /><a target="_blank" href="/docs#webhookblock">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="textinputDragger" draggable="true">Text Input </div>
+                                <button class="info" title="Dynamically fill other input fields" data-doc='Fill the text input of other blocks. This effectively transforms a Pipe into a re-usable API.<br /><br /><a target="_blank" href="/docs#textinputblock">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% if authorized? %>
+                                <li>
+                                    <div class="blockDragger" data-id="pipeDragger" draggable="true">Pipe</div>
+                                    <button class="info" title="Use another pipes as a block" data-doc='Use one of your other pipes as input block in this pipe. This block will output exactly the feed the pipe normally creates, which can be given to other blocks as input.<br /><br /><a target="_blank" href="/docs#pipeblock">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                                </li>
+                            <% end %>
+                        </ol>
+                    </details>
+                    <% if rssbox? || rssbridge? %>
+                    <details id="menuIntegrations"><summary>Integrations</summary>
+                        <ol>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="dailymotionDragger" draggable="true">Dailymotion </div>
+                                <button class="info" title="Receive data from Dailymotion" data-doc='Enter a Dailymotion channel name or a url.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="mixcloudDragger" draggable="true">Mixcloud </div>
+                                <button class="info" title="Receive data from Mixcloud" data-doc='Enter a Mixcloud username or a url to a user or track.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="periscopeDragger" draggable="true">Periscope </div>
+                                <button class="info" title="Receive data from Periscope" data-doc='Enter a Periscope username or a url.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbridge? %>
+                            <li>
+                                <div class="blockDragger" data-id="redditDragger" draggable="true">Reddit </div>
+                                <button class="info" title="Receive data from Reddit" data-doc='Enter a Reddit subreddit, or multiple separated with a comma.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbridge? %>
+                            <li>
+                                <div class="blockDragger" data-id="soundcloudDragger" draggable="true">Soundcloud </div>
+                                <button class="info" title="Receive data from Soundcloud" data-doc='Enter a soundcloud user name.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="speedrunDragger" draggable="true">Speedrun </div>
+                                <button class="info" title="Receive data from Speedrun" data-doc='Enter a game name or a speedrun.com url.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="svtplayDragger" draggable="true">SVT Play </div>
+                                <button class="info" title="Receive data from SVT Play" data-doc='Enter a SVT Play program name or a url.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                            <% if rssbox? %>
+                            <li>
+                                <div class="blockDragger" data-id="vimeoDragger" draggable="true">Vimeo </div>
+                                <button class="info" title="Receive data from Vimeo" data-doc='Enter a Vimeo channel name, video id, or a url to a channel or video.<br /><br /><a target="_blank" href="/docs#integrations">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <% end %>
+                        </ol>
+                    </details>
                     <% end %>
-                </ol>
-            </details>
-            <details id="menuManipulate"><summary>Manipulate</summary>
-                <ol>
-                    <li>
-                        <div class="blockDragger" data-id="filterDragger" draggable="true">Filter </div>
-                        <button class="info" title="Search for items with a keyword" data-doc='Only keep items in a feed that contain the keyword in their description, title or content. Alternatively block all those items. This performs a basic text search case-sensitive when given a keyword, or it will search by interpreting a given <a target="_blank" href="http://rubular.com/">regular expression</a>.<br /><br /><a target="_blank" href="/docs#filter">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="replaceDragger" draggable="true">Replace </div>
-                        <button class="info" title="Search for items with a keyword" data-doc='Replace some text in the content of a feed item. This supports regular <a target="_blank" href="http://rubular.com/">regular expression</a>.<br /><br /><a target="_blank" href="/docs#replace">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="uniqueDragger" draggable="true">Unique </div>
-                        <button class="info" title="Remove duplicate feed items" data-doc='Remove duplicate items from a feed. This uses their guid, and Pipes will try to generate guids for feeds that do not provide them.<br /><br /><a target="_blank" href="/docs#unique">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="truncateDragger" draggable="true">Truncate </div>
-                        <button class="info" title="Linit the number of items" data-doc='Limiting the length of a feed can be useful if you show the feed result somewhere, like showing the 5 newest results of a feed from a pipe that searches some sites for a keyword.<br /><br /><a target="_blank" href="/docs#truncate">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="sortDragger" draggable="true">Sort </div>
-                        <button class="info" title="Sort by date" data-doc='Sort the input feed by the selected item element. The default is to sort by <code>updated</code>. It is also possible to sort by text when selecting another item element, like the title.<br /><br /><a target="_blank" href="/docs#sort">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                </ol>
-            </details>
-            <details id="menuControl"><summary>Control</summary>
-                <ol>
-                    <li>
-                        <div class="blockDragger" data-id="combineDragger" draggable="true">Combine </div>
-                        <button class="info" title="Combine multiple feeds into a single one" data-doc='Merge the input feeds into a single feed. The items stay in the order they are, just the whole input feed gets concatenated. Feed titles and descriptions will be combined.<br /><br /><a target="_blank" href="/docs#combine">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="duplicateDragger" draggable="true">Duplicate </div>
-                        <button class="info" title="Split a feed into multiple ones" data-doc='Splitting a feed into multiple feeds is useful if you want to manipulate them in multiple ways and then merge them again. An example is filtering a feed for multiple keywords.<br /><br /><a target="_blank" href="/docs#duplicate">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="mergeDragger" draggable="true">Merge Items </div>
-                        <button class="info" title="Merge the content of two feeds together
-                        " data-doc='Merges the content of two feed items together into one, item by item. <br /><br /><a target="_blank" href="/docs#merge">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="foreachDragger" draggable="true">ForEach </div>
-                        <button class="info" title="Execute download, feed or tweets blocks multiple times
-                        " data-doc='Execute download, feed or tweets blocks multiple times. It runs them once for every item in the connected block, using the item content as input for the text field. <br /><br /><a target="_blank" href="/docs#foreach">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                </ol>
-            </details>
-            <details id="menuCreate"><summary>Create</summary>
-                <ol>
-                    <li>
-                        <div class="blockDragger" data-id="extractDragger" draggable="true">Extract </div>
-                        <button class="info" title="Extract an element from a page or feed" data-doc='Use xpath to select an element from a downloaded XML file or a from a feed, a css selector to get data from a HTML document, or JSONPath for JSON data. By default this will return the content of those elements, but you can also select a different attribute.<br /><br /><a target="_blank" href="/docs#extract">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="imagesDragger" draggable="true">Images </div>
-                        <button class="info" title="Extract images from a page or feed" data-doc='Extract all images from the input feed or page. Open the gallery to have an overview of which images have been found.<br /><br /><a target="_blank" href="/docs#images">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="insertDragger" draggable="true">Insert </div>
-                        <button class="info" title="Insert an element from into a feed" data-doc='Insert an element into an other feed at a position specified by an xpath.<br /><br /><a target="_blank" href="/docs#insert">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                    <li>
-                        <div class="blockDragger" data-id="builderDragger" draggable="true">Build Feed </div>
-                        <button class="info" title="Build a new feed from extracted elements" data-doc='Connect the result from the extract block to this block to create a new RSS Feed. You can fill title, content, date and title of the output feeds items, only content is required. <br/><br/>Regular feeds can also be used as input for this, it will use their items content element.<br /><br /><a target="_blank" href="/docs#builder">Read more in the documentation</a>'><i class="infoicon fas fa-info-circle"></i></button>
-                    </li>
-                </ol>
-            </details>
-            <button class="pure-button" id="save"><i class="fas fa-check"></i> save</button>
+                    <details id="menuManipulate"><summary>Manipulate</summary>
+                        <ol>
+                            <li>
+                                <div class="blockDragger" data-id="filterDragger" draggable="true">Filter </div>
+                                <button class="info" title="Search for items with a keyword" data-doc='Only keep items in a feed that contain the keyword in their description, title or content. Alternatively block all those items. This performs a basic text search case-sensitive when given a keyword, or it will search by interpreting a given <a target="_blank" href="http://rubular.com/">regular expression</a>.<br /><br /><a target="_blank" href="/docs#filter">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                             <li>
+                                <div class="blockDragger" data-id="filterlangDragger" draggable="true">Filter Language</div>
+                                <button class="info" title="Search for items with a keyword" data-doc='Only keep items in a feed that are written in the target language. Alternatively block those items. This performs an n-gram- analysis which usually only works well with texts longer than 10 words.<br /><br /><a target="_blank" href="/docs#filterlang">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="replaceDragger" draggable="true">Replace </div>
+                                <button class="info" title="Search for items with a keyword" data-doc='Replace some text in the content of a feed item. This supports regular <a target="_blank" href="http://rubular.com/">regular expression</a>.<br /><br /><a target="_blank" href="/docs#replace">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="uniqueDragger" draggable="true">Unique </div>
+                                <button class="info" title="Remove duplicate feed items" data-doc='Remove duplicate items from a feed. This uses their guid, and Pipes will try to generate guids for feeds that do not provide them.<br /><br /><a target="_blank" href="/docs#unique">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="truncateDragger" draggable="true">Truncate </div>
+                                <button class="info" title="Linit the number of items" data-doc='Limiting the length of a feed can be useful if you show the feed result somewhere, like showing the 5 newest results of a feed from a pipe that searches some sites for a keyword.<br /><br /><a target="_blank" href="/docs#truncate">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="sortDragger" draggable="true">Sort </div>
+                                <button class="info" title="Sort by date" data-doc='Sort the input feed by the selected item element. The default is to sort by <code>updated</code>. It is also possible to sort by text when selecting another item element, like the title.<br /><br /><a target="_blank" href="/docs#sort">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="shortenDragger" draggable="true">Shorten </div>
+                                <button class="info" title="Truncate the content of a feed" data-doc='Shorten the content of a feed to a given length. <br /><br /><a target="_blank" href="/docs#shorten">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                        </ol>
+                    </details>
+                    <details id="menuControl"><summary>Control</summary>
+                        <ol>
+                            <li>
+                                <div class="blockDragger" data-id="combineDragger" draggable="true">Combine </div>
+                                <button class="info" title="Combine multiple feeds into a single one" data-doc='Merge the input feeds into a single feed. The items stay in the order they are, just the whole input feed gets concatenated. Feed titles and descriptions will be combined.<br /><br /><a target="_blank" href="/docs#combine">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="duplicateDragger" draggable="true">Duplicate </div>
+                                <button class="info" title="Split a feed into multiple ones" data-doc='Splitting a feed into multiple feeds is useful if you want to manipulate them in multiple ways and then merge them again. An example is filtering a feed for multiple keywords.<br /><br /><a target="_blank" href="/docs#duplicate">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="mergeDragger" draggable="true">Merge Items </div>
+                                <button class="info" title="Merge the content of two feeds together
+                                " data-doc='Merges the content of two feed items together into one, item by item. <br /><br /><a target="_blank" href="/docs#merge">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="foreachDragger" draggable="true">ForEach </div>
+                                <button class="info" title="Execute download, feed or tweets blocks multiple times
+                                " data-doc='Execute download, feed or tweets blocks multiple times. It runs them once for every item in the connected block, using the item content as input for the text field. <br /><br /><a target="_blank" href="/docs#foreach">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                        </ol>
+                    </details>
+                    <details id="menuCreate"><summary>Create</summary>
+                        <ol>
+                            <li>
+                                <div class="blockDragger" data-id="extractDragger" draggable="true">Extract </div>
+                                <button class="info" title="Extract an element from a page or feed" data-doc='Use xpath to select an element from a downloaded XML file or a from a feed, a css selector to get data from a HTML document, or JSONPath for JSON data. By default this will return the content of those elements, but you can also select a different attribute.<br /><br /><a target="_blank" href="/docs#extract">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="imagesDragger" draggable="true">Images </div>
+                                <button class="info" title="Extract images from a page or feed" data-doc='Extract all images from the input feed or page. Open the gallery to have an overview of which images has been found.<br /><br /><a target="_blank" href="/docs#images">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="tabletojsonDragger" draggable="true">Tables </div>
+                                <button class="info" title="Extract tables from a page or feed" data-doc='Extract all HTML tables from the input feed or page. It converts them into JSON and removes all other content.<br /><br /><a target="_blank" href="/docs#tabletojson">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="insertDragger" draggable="true">Insert </div>
+                                <button class="info" title="Insert an element from into a feed" data-doc='Insert an element into an other feed at a position specified by an xpath.<br /><br /><a target="_blank" href="/docs#insert">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                            <li>
+                                <div class="blockDragger" data-id="builderDragger" draggable="true">Build Feed </div>
+                                <button class="info" title="Build a new feed from extracted elements" data-doc='Connect the result from the extract block to this block to create a new RSS Feed. You can fill title, content, date and title of the output feeds items, only content is required. <br/><br/>Regular feeds can also be used as input for this, it will use their items content element.<br /><br /><a target="_blank" href="/docs#builder">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                            </li>
+                        </ol>
+                    </details>
+                    </div>
+                </details>
+                <details id="dataBlocks" name="tabs" class="details-item">
+                    <summary class="details-tab"><a class="pure-button tab-control">Data</a></summary>
+                    <div class="details-content">
+                    <ol>
+                        <li>
+                            <div class="blockDragger" data-id="wateredDownloadDragger" draggable="true">Download </div>
+                            <button class="info" title="Remove elements from data" data-doc='The download block that interprets the target as structured data.<br /><br /><a target="_blank" href="/docs#download">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                        </li>
+                        <li>
+                            <div class="blockDragger" data-id="wateredDuplicateDragger" draggable="true">Duplicate </div>
+                            <button class="info" title="Remove elements from data" data-doc='The duplicate block for structured data.<br /><br /><a target="_blank" href="/docs#duplicate">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                        </li>
+                        <li>
+                            <div class="blockDragger" data-id="wateredFilterDragger" draggable="true">Filter </div>
+                            <button class="info" title="Remove elements from data" data-doc='Remove items from structured input data. Takes a json path to the field to remove, an optional path to a child field to base the filtering on, and the keyword or regexpression to filter for.<br /><br /><a target="_blank" href="/docs#filter_structured">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                        </li>
+                        <li>
+                            <div class="blockDragger" data-id="wateredReplaceDragger" draggable="true">Replace </div>
+                            <button class="info" title="Remove elements from data" data-doc='Replace values in a specific field. Takes a keyword or regular expression, then the replacement value, and finally a JSON path to the field where values are to be replaced. <br /><br /><a target="_blank" href="/docs#replace_structured">Read more in the documentation</a>'><img src="/icons/info.svg" class="feather infoicon"></button>
+                        </li>
+                        
+                    </ol>
+                    </div>
+                </details>
+            </div>
         </aside>
         <form>
-            <main id="program"<% if ! authorized? %> data-needlogin="true" <% end %>  <% if hashed_id %>data-pipeid="<%= hashed_id %>"<% end %> <% if fork_id %>data-forkid="<%= fork_id %>"<% end %> ></main>
+            <main id="program"<% if ! authorized? %> data-needlogin="true" <% end %>  <% if hashed_id %>data-pipeid="<%= h hashed_id %>"<% end %> <% if fork_id %>data-forkid="<%= h fork_id %>"<% end %> ></main>
             <div id="inspector">
-                <button id="inspectorClose" class="pure-button" type="button"><i class="fas fa-window-close"></i></button>
+                <button id="inspectorClose" class="pure-button" type="button"><img src="/icons/x-square.svg" class="feather"></button>
                 <div id="log"></div>
             </div>
         </form>
     </div>
-   
+
+    <script src="/node_modules/@iconfu/svg-inject/dist/svg-inject.min.js"></script>
+    <script>SVGInject(document.querySelectorAll('img[src$=".svg"]'));</script>
 </body>
 </html>

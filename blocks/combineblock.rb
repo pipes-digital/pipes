@@ -9,35 +9,30 @@ class Combineblock < Block
             
             inputs.each do |input|
                 next if input.nil?
-                begin
-                    feed = FeedParser::Parser.parse(input)
-                rescue NameError => nme
-                    # a name error can happen if the feed is nil
-                    next
-                end
+                feed = input
                 
                 if maker.channel.title
-                    maker.channel.title += " & "  + feed.title
+                    maker.channel.title += " & "  + feed.channel.title
                 else
-                    maker.channel.title = feed.title
+                    maker.channel.title = feed.channel.title
                 end
 
 
                 if maker.channel.updated
-                    maker.channel.updated = feed.updated.to_s if feed.updated && feed.updated > maker.channel.updated
+                    maker.channel.updated = feed.channel.pubDate if feed.channel.pubDate && feed.channel.pubDate > maker.channel.updated
                 else
-                    if feed.updated
-                        maker.channel.updated = feed.updated.to_s
+                    if feed.channel.pubDate
+                        maker.channel.updated = feed.channel.pubDate
                     else
                         maker.channel.updated = Time.at(0).to_datetime.to_s
                     end
                 end
 
                 if maker.channel.description && maker.channel.description != ""
-                    maker.channel.description += " & "  + feed.summary.to_s
+                    maker.channel.description += " & "  + feed.channel.description.to_s
                 else
-                    if (feed.summary && feed.summary != '')
-                        maker.channel.description = feed.summary
+                    if (feed.channel.description && feed.channel.description != '')
+                        maker.channel.description = feed.channel.description
                     else
                         maker.channel.description = ' ' # the rss won't get emitted if description is empty
                     end
@@ -56,9 +51,9 @@ class Combineblock < Block
         end
 
         if rss.items.size == 0
-            return '<rss version="2.0"><channel><title>Nothing to combine</title><link></link><description>Nothing to combine. Most likely reason is that the input feeds contained no items.</description></channel></rss>'
+            self.errorFeed('Nothing to combine', 'Nothing to combine. Most likely reason is that the input feeds contained no items.')
         end
-        return rss.to_s
+        return rss
     end
 
 end

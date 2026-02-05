@@ -1,14 +1,17 @@
-class Pipe
+require 'date'
 
-    # Configuration
-    HASHIDS_PIPE_SECRET = ENV['PIPES_HASHIDS_PIPE_SECRET'] || 'pipedypipe'
-    CACHE_TTL = 600  # seconds (10 minutes)
+class Pipe
 
     # the final output block that has to return a feed. Its run-function will call all children block, who will do the same
     attr_accessor :output
     attr_accessor :title
+    attr_accessor :starttime
+    attr_accessor :user
+    attr_accessor :id
+    # true if the pipe uses data blocks (instead of classic RSS blocks) in the end
+    attr_accessor :watered
 
-    def initialize(id: nil, pipe: nil, start: nil, params: {})
+    def initialize(id: nil, pipe: nil, start: nil, params: {}, user:)
         if (id)
             stored_data = Database.instance.getPipe(id: id)
             pipe = JSON.parse(stored_data['pipe'])
@@ -18,16 +21,23 @@ class Pipe
         else
             pipe = JSON.parse(pipe)
             root = pipe['blocks'].detect{|x| x['id'] == start }
-            self.output = createBlock(root, params)
+            if start == 'output'
+                self.output = Block.new
+            else
+                self.output = createBlock(root, params)
+            end
             id = :temp
         end
+        
         self.output.inputs = createInputs(root['inputs'], pipe, params)
         @id = id
         @params = params
+        @watered = self.output.inputs.first.kind_of?(WateredBlock)
+        self.user = user
     end
 
     def encodedId()
-        return Hashids.new(HASHIDS_PIPE_SECRET, 8).encode(@id) unless @id == :temp
+        return Hashids.new(ENV['PIPES_URL_SECRET'], 8).encode(@id) unless @id == :temp
         return "temp"
     end
 
@@ -52,6 +62,23 @@ class Pipe
             when 'InsertBlock' then Insertblock.new
             when 'ForeachBlock' then Foreachblock.new
             when 'ImagesBlock' then ImagesBlock.new
+            when 'ShortenBlock' then ShortenBlock.new
+            when 'PeriscopeBlock' then PeriscopeBlock.new
+            when 'MixcloudBlock' then MixcloudBlock.new
+            when 'SpeedrunBlock' then SpeedrunBlock.new
+            when 'UstreamBlock' then UstreamBlock.new
+            when 'DailymotionBlock' then DailymotionBlock.new
+            when 'SoundcloudBlock' then SoundcloudBlock.new
+            when 'SvtplayBlock' then SvtplayBlock.new
+            when 'VimeoBlock' then VimeoBlock.new
+            when 'TwitchBlock' then TwitchBlock.new
+            when 'RedditBlock' then RedditBlock.new
+            when 'TabletojsonBlock' then TabletojsonBlock.new
+            when 'FilterlangBlock' then FilterlangBlock.new
+            when 'WateredDownloadBlock' then WateredDownloadblock.new
+            when 'WateredFilterBlock' then WateredFilterblock.new
+            when 'WateredDuplicateBlock' then WateredDuplicateblock.new
+            when 'WateredReplaceBlock' then WateredReplaceblock.new
         end
         block.options[:userinput] = blockData['userinput'] if blockData['userinput']
         block.options[:userinputs] = blockData['userinputs'] if blockData['userinputs']
@@ -87,23 +114,39 @@ class Pipe
 
     # execute the pipe
     def run(mode: :xml)
+        self.starttime = Time.now
         if @id == :temp
             return output.run
         else
             id = @id.to_s + mode.to_s + Digest::SHA1.hexdigest(@params.to_s)
-            result, date = Database.instance.getCache(key: id)
-            if date.nil? || (date + CACHE_TTL) < Time.now.to_i
+            resultRaw = Database.instance.getCache(key: id)
+            if resultRaw.nil?
+                result = ''
                 result = output.run
-                if mode == :txt
-                    begin
-                        doc = Nokogiri::XML(result) { |config| config.nonet.noent }
-                        contents = doc.xpath('//item/content:encoded')
-                        result = contents.map{|x| x.content.strip }.join("\n")
-                    rescue Nokogiri::XML::XPath::SyntaxError
+                if result.kind_of?(Water)
+                    Database.instance.cache(key: id, value: result.solidify(mode))
+                else
+                    if mode == :txt
+                        begin
+                            doc = Nokogiri::XML(result.to_s)
+                            contents = doc.xpath('//item/content:encoded')
+                            result = contents.map{|x| x.content.strip }.join("\n")
+                        rescue Nokogiri::XML::XPath::SyntaxError
+                        end
+                    end
+                    
+                    Database.instance.cache(key: id, value: result.to_s)
+                end
+            else
+                if @watered
+                    result = Water.new.absorb(resultRaw)
+                else
+                    if (mode == :xml)
+                        result = RSS::Parser.parse(resultRaw)
+                    else
+                        result = resultRaw
                     end
                 end
-                
-                Database.instance.cache(key: id, value: result)
             end
             return result
         end

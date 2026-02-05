@@ -4,92 +4,94 @@ require 'to_regexp'
 
 class Mergeblock < Block
     def process(inputs)
-        begin
-            feed1 = FeedParser::Parser.parse(inputs[0])
-        rescue NoMethodError
-        end
-        begin
-            feed2 = FeedParser::Parser.parse(inputs[1])
-        rescue NoMethodError
-        end
+        feed1 = inputs[0]
+        feed2 = inputs[1]
+
         scheme = self.options[:userinputs][0] if self.options[:userinputs]
 
         return inputs[0] if (! inputs[1] && inputs[0])
         return inputs[1] if (! inputs[0] && inputs[1])
 
         rss = RSS::Maker.make("rss2.0") do |maker|
-            maker.channel.updated = feed1.updated if feed1.updated
-            maker.channel.updated = feed2.updated if feed2.updated
-            if feed1.updated && feed2.updated
-                if feed1.updated > feed2.updated
-                    maker.channel.updated = feed1.updated
+            maker.channel.updated = feed1.channel.pubDate if feed1.channel.pubDate
+            maker.channel.updated = feed2.channel.pubDate if feed2.channel.pubDate
+            if feed1.channel.pubDate && feed2.channel.pubDate
+                if feed1.channel.pubDate > feed2.channel.pubDate
+                    maker.channel.updated = feed1.channel.pubDate
                 else
-                    maker.channel.updated = feed2.updated
+                    maker.channel.updated = feed2.channel.pubDate
                 end
             end
-            maker.channel.title = feed1.title + " & " + feed2.title
-            if (feed1.url && feed1.url != '')
-                maker.channel.link = feed1.url
+            maker.channel.title = feed1.channel.title + " & " + feed2.channel.title
+            if (feed1.channel.link && feed1.channel.link != '')
+                maker.channel.link = feed1.channel.link
             else
-                if (feed1.feed_url && feed1.feed_url != '')
-                    maker.channel.link = feed1.feed_url
+                if (feed2.channel.link && feed2.channel.link != '')
+                    maker.channel.link = feed2.channel.link
                 else
                     maker.channel.link = ' ' # the rss won't get emitted if link is empty
                 end
             end
-            if (feed1.summary && feed1.summary != '')
-                maker.channel.description = feed1.summary
+            if (feed1.channel.description && feed1.channel.description != '')
+                maker.channel.description = feed1.channel.description
             else
-                maker.channel.description = ' ' # the rss won't get emitted if description is empty
+                if (feed2.channel.description && feed2.channel.description != '')
+                    maker.channel.description = feed2.channel.description
+                else
+                    maker.channel.description = ' ' # the rss won't get emitted if description is empty
+                end
             end
 
             feed1.items.each_with_index do |item, index|
                 maker.items.new_item do |newItem|
                     newItem.title = item.title
-                    if item.updated
-                        newItem.updated = item.updated.to_s
-                    end
-                    newItem.pubDate = item.published.to_s if item.published
+                    newItem.updated = item.updated if item.updated
                     if (item.url && item.url != '')
                         newItem.link = item.url
                     else
-                        newItem.link = '' # the rss won't get emitted if description is empty
+                        newItem.link = ' ' # the rss won't get emitted if link is empty
                     end
                     newItem.content_encoded = merge(scheme, item.content.to_s, feed2.items[index].content.to_s)
                     newItem.description = merge(scheme, item.summary.to_s, feed2.items[index].summary.to_s)
                     newItem.author = item.author if item.author
                     if item.author
-                        newItem.author += feed2.items[index].author if feed2.items[index].author 
+                        newItem.author = item.author.to_s + feed2.items[index].author.to_s if feed2.items[index].author 
                     else
                         newItem.author = feed2.items[index].author if feed2.items[index].author
                     end
-                    if item.attachments?
-                        newItem.enclosure.url = item.attachment.url
-                        newItem.enclosure.length = item.attachment.length
-                        newItem.enclosure.type = item.attachment.type
+                    if item.enclosure
+                        newItem.enclosure.url = item.enclosure.url
+                        newItem.enclosure.length = item.enclosure.length
+                        newItem.enclosure.type = item.enclosure.type
+                        if (newItem.description.nil? || newItem.description.empty?) && item.enclosure.description
+                            newItem.description = item.enclosure.description.gsub(/\n/,"<br />\n")
+                        end
                     else
-                        if feed2.items[index].attachments?
-                            newItem.enclosure.url = feed2.items[index].attachment.url
-                            newItem.enclosure.length = feed2.items[index].attachment.length
-                            newItem.enclosure.type = feed2.items[index].attachment.type
+                        if feed2.items[index].enclosure
+                            newItem.enclosure.url = feed2.items[index].enclosure.url
+                            newItem.enclosure.length = feed2.items[index].enclosure.length
+                            newItem.enclosure.type = feed2.items[index].enclosure.type
+                            if (newItem.description.nil? || newItem.description.empty?) && feed2.items[index].enclosure.description
+                                newItem.description = feed2.items[index].enclosure.description.gsub(/\n/,"<br />\n")
+                            end
                         end
                     end
                     newItem.guid.content = Digest::MD5.hexdigest(newItem.description.to_s + newItem.content_encoded.to_s)
                     item.categories.each do |category|
                         target = newItem.categories.new_category
-                        target.content = category.name
-                        target.domain = category.scheme
+                        target.content = category.content
+                        target.domain = category.domain
                     end
                     feed2.items[index].categories.each do |category|
                         target = newItem.categories.new_category
-                        target.content = category.name
-                        target.domain = category.scheme
+                        target.content = category.content
+                        target.domain = category.domain
                     end
                 end
             end
         end
 
-        return rss.to_s
+        return rss
     end
 
     # merge merges the two inputs into one, following scheme

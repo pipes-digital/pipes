@@ -3,22 +3,20 @@
 <head>
     <meta charset="utf-8">
     <title><%= pipe['title'] %> | Pipes</title>
-    <link rel="stylesheet" href="/css/font-awesome-core.css?v=1">
-    <link rel="stylesheet" href="/css/font-awesome-solid.css?v=1">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/grids-responsive-min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/purecss/build/pure-min.css">
+    <link rel="stylesheet" href="/node_modules/purecss/build/grids-responsive-min.css">
+    
+    <script src="/node_modules/vex-js/dist/js/vex.combined.min.js"></script>
     <script>vex.defaultOptions.className = 'vex-theme-wireframe'</script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-wireframe.css" />
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex.css" />
+    <link rel="stylesheet" href="/node_modules/vex-js/dist/css/vex-theme-wireframe.css" />
     <link href="<%= url 'style.css' %>" rel="stylesheet">
     <script src="<%= url '/pipe.js' %>"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#9f00a7">
     <meta name="theme-color" content="#ffffff">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -39,22 +37,22 @@
             <div class="settings_notification notification_success" id="copied">Duplicated Pipe!</div>
             <div class="pure-g">
                 <div class="pure-u-1 pure-u-md-2-5 preview-content">
-                    <svg class="preview"><g transform="scale(0.21)"><%= pipe['preview'] %></g></svg>
+                    <img class="preview" src="<%= inlineSvg(pipe['preview']) %>">
                 </div>
                 <div class="pure-u-2 pure-u-md-3-5 pipe-content">
-                    <h2><%= pipe['title'] %> <% if owned %><button class="edit"><i class="edit fas fa-edit"></i></button><% end %></h2>
+                    <h2><%= pipe['title'] %> <% if owned %><button class="edit"><img src="/icons/edit.svg" class="feather edit"></img></button><% end %></h2>
 
                     
-                    <p class="description"><%= pipe['description'].empty? ? '<em>No description yet</em>' : pipe['description'].gsub("\n", '<br />') %> <% if owned %><button class="descedit"><i class="descedit fas fa-edit"></i></button><% end %></p>
+                    <p class="description"><%= pipe['description'].empty? ? '<em>No description yet</em>' : pipe['description'].gsub("\n", '<br />') %> <% if owned %><button class="descedit"><img src="/icons/edit.svg" class="feather descedit"></img></button><% end %></p>
                     
                     <% pipe['tags']&.split(',')&.each do |tag| %>
-                        <a href="<%= url '/pipes?tag=' + tag %>"><span class="tag"><%= tag %><% if owned %><button class="tagremove"><i class="tagremoveicon fas fa-minus-square"></i></button><% end %></span></a>
+                        <a href="<%= url '/pipes?tag=' + tag %>"><span class="tag"><%= tag %><% if owned %><img src="/icons/minus-square.svg" class="feather tagremoveicon"></img></button><% end %></span></a>
                     <% end %>
                     <% if owned %>
                         <% if pipe['tags'].nil? %>
                             <span class="tag">No tags</span>
                         <% end %> 
-                        <button class="tagadd"><i class="tagaddicon fas fa-plus-square"></i></button>
+                        <button class="tagadd"><img src="/icons/plus-square.svg" class="feather tagaddicon"></img></button>
                     <% end %>
                     
 
@@ -75,26 +73,29 @@
             <footer>
                 <% if owned %>
                     <% if pipe['public'] == 1 %>
-                        <button class="unsharePipe pure-button"><i class="unshareicon fas fa-lock"></i> Make Private</button>
+                        <button class="unsharePipe pure-button"><img src="/icons/lock.svg"></img> Make Private</button>
                     <% else %>
-                        <button class="sharePipe pure-button"><i class="shareicon fas fa-share-alt"></i> Make Public</button>
+                        <button class="sharePipe pure-button"><img src="/icons/share-2.svg"></img> Make Public</button>
                     <% end %>
                 <% end %>
-                <a class="pure-button" href="<%= url '/feedpreview/' + encodeid(pipe['id']) %>"><i class="fas fa-rss"></i> Feed</a>
+                <a class="pure-button" href="<%= url '/feedpreview/' + encodeid(pipe['id']) %>"><img src="/icons/rss.svg"></img> Feed</a>
                 <% if owned %>
-                    <a class="pure-button" href="<%= url '/editor/' + encodeid(pipe['id']) %>"><i class="fas fa-edit"></i> Edit</a>
-                    <button class="copyPipe pure-button"><i class="copyicon fas fa-copy"></i> Duplicate</button>
+                    <a class="pure-button" href="<%= url '/editor/' + encodeid(pipe['id']) %>"><img src="/icons/edit.svg"></img> Edit</a>
+                    <button class="copyPipe pure-button"><img src="/icons/copy.svg"></img> Duplicate</button>
                 <% else %>
                     <% if pipe['public'] == 1 %>
-                        <a class="pure-button" href="<%= url '/editor?fork=' + encodeid(pipe['id']) %>"><i class="fas fa-code-branch"></i> Fork</a>
+                        <a class="pure-button" href="<%= url '/editor?fork=' + encodeid(pipe['id']) %>"><img src="/icons/file-plus.svg"></img> Fork</a>
                     <% end %>
                 <% end %>
                 <% if owned %>
-                    <button class="delete pure-button"><i class="deleteicon fas fa-trash"></i> Delete</button></dd>
+                    <button class="delete pure-button"><img src="/icons/trash.svg"></img> Delete</button></dd>
                 <% end %>
             </footer>
         </div>
         <div class="pure-u-1 pure-u-md-1-5"> </div>
     </main>
+
+    <script src="/node_modules/@iconfu/svg-inject/dist/svg-inject.min.js"></script>
+    <script>SVGInject(document.querySelectorAll('img[src$=".svg"]'));</script>
 </body>
 </html>

@@ -1,72 +1,95 @@
 require 'rss'   
 require 'feedparser'
+require 'to_regexp'
+require 'janeway'
 
 class Replaceblock < Block
     def process(inputs)
-        feed = FeedParser::Parser.parse(inputs[0])
+        feed = inputs[0]
         pattern = self.options[:userinputs][0] if self.options[:userinputs]
         replace = self.options[:userinputs][1] if self.options[:userinputs]
+        if self.options[:userinputs] && self.options[:userinputs][2] 
+            field = self.options[:userinputs][2]
+        else
+            field = 'all'
+        end
 
         begin
             regexp = pattern.to_regexp(detect: true)
         rescue RegexpError => re
-            return '<rss version="2.0"><channel><title>Invalid regexpression</title><link></link><description>' + re.message + '</description></channel></rss>'
+            return self.errorFeed('Invalid regexpression', re.message)
+        rescue NoMethodError => nme
+            return self.errorFeed('Could not interpret pattern as regular expression', nme.message)
         end
 
         return inputs[0] if regexp.nil?
+        rss = ""
 
-        rss = RSS::Maker.make("rss2.0") do |maker|
-            maker.channel.updated = feed.updated&.to_s
-            maker.channel.title = feed.title
-            if (feed.url && feed.url != '')
-                maker.channel.link = feed.url
-            else
-                if (feed.feed_url && feed.feed_url != '')
-                    maker.channel.link = feed.feed_url
-                else
-                    maker.channel.link = ' ' # the rss won't get emitted if link is empty
-                end
-            end
-            if (feed.summary && feed.summary != '')
-                maker.channel.description = feed.summary
-            else
-                maker.channel.description = ' ' # the rss won't get emitted if description is empty
-            end
-
-            feed.items.each do |item|
-                maker.items.new_item do |newItem|
-                    newItem.title = item.title.gsub(regexp, replace) if item.title
-                    if item.updated
-                        newItem.updated = item.updated.to_s
-                    end
-                    newItem.pubDate = item.published.to_s if item.published
-                    if (item.url && item.url != '')
-                        newItem.link = item.url
-                    else
-                        newItem.link = ''
-                    end
-                    
-                    newItem.content_encoded = item.content.gsub(regexp, replace) if item.content
-                    newItem.guid.content = item.guid
-                    newItem.guid.isPermaLink = item.guid.include?('http')
-                    newItem.description = item.summary.gsub(regexp, replace) if item.summary && ! item.summary.empty?
-                    newItem.author = item.author if item.author
-                    if item.attachments?
-                        newItem.enclosure.url = item.attachment.url
-                        newItem.enclosure.length = item.attachment.length
-                        newItem.enclosure.type = item.attachment.type
-                    end
-                    item.categories.each do |category|
-                        target = newItem.categories.new_category
-                        target.content = category.name
-                        target.domain = category.scheme
+        begin
+            # NOTE: timeout might lead to instability. But pipes is already instable because this code deadlocked without the timeout, so this is a hail marry try to get the server more stable
+            Timeout::timeout(10) {
+                rss = RSS::Maker.make("rss2.0") do |maker|
+                    self.transferChannel(maker, feed)
+                   
+                    feed.items.each do |item|
+                        maker.items.new_item do |newItem|
+                            if timeout?
+                                next
+                            end
+                            case field
+                            when 'all'
+                                item.title = item.title.gsub(regexp, replace) if item.title
+                                item.content_encoded = item.content.gsub(regexp, replace) if item.content
+                                item.description = item.summary.gsub(regexp, replace) if item.summary && ! item.summary.empty?
+                            when 'title' then item.title = item.title.gsub(regexp, replace) if item.title
+                            when 'content' then item.content_encoded = item.content.gsub(regexp, replace) if item.content
+                            when 'summary' then item.description= item.summary.gsub(regexp, replace) if item.summary && ! item.summary.empty?
+                            when 'guid'
+                                item.guid = item.guid.content.gsub(regexp, replace) if item.guid
+                            end
+                            newItem = transferData(newItem, item)
+                        end
+                        if timeout?
+                            break
+                        end
                     end
                 end
+            }
+        rescue Timeout::Error
+            warn "timeout error in replace block"
+            return self.errorFeed('Replace block timed out', 'The replacement operation took too long and triggered a safeguard. Please try it with less data or email support.')
+        end
+
+        return rss
+        
+    end
+end
+    
+class WateredReplaceblock < WateredBlock
+    def process(inputs)
+        water = inputs[0]
+        pattern = self.options[:userinputs][0]
+        replace = self.options[:userinputs][1]
+        targetField = self.options[:userinputs][2]
+        targetField = '$..*' if targetField.nil?
+
+        begin
+            regexp = pattern.to_regexp(detect: true)
+        rescue RegexpError => re
+            return self.errorFeed('Invalid regexpression', re.message)
+        end
+
+        return inputs[0] if regexp.nil?
+        
+        Janeway.enum_for(targetField, water.data).replace do |field|
+            if (field.kind_of?(String))
+                field.gsub(regexp, replace)
+            else
+                field
             end
         end
 
-        return rss.to_s
+        return water
        
     end
-
 end

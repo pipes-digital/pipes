@@ -4,21 +4,20 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Rendered Feed Preview">
-    <title>Pipes Feed Preview: <%= feed.title&.to_s %> </title>
+    <title>Pipes Feed Preview: <%= feed.channel.title&.to_s %> </title>
 
     <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+    <link rel="stylesheet" href="/node_modules/purecss/build/pure-min.css">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#9f00a7">
     <meta name="theme-color" content="#ffffff">
     <meta name="robots" content="none" />
 
-    <link rel="alternate" type="application/rss+xml" href="https://pipes.digital/feed/<%= hashed_id %><%= paramsToArgs(params: params) %>" />
+    <link rel="alternate" type="application/rss+xml" href="<%= url '/feed/' %><%= hashed_id %><%= paramsToArgs(params: params) %>" />
     <style>
         #pipe_feedlist {
             counter-reset: li;
@@ -48,11 +47,11 @@
 <body>
     <%= erb :nav, :locals => {:current => 'none'} %>
     <div id="feedpreview">
-        <h1>Pipes Feed Preview: <%= feed.title&.to_s %></h1>
+        <h1>Pipes Feed Preview: <%= feed.channel.title&.to_s %></h1>
         <a href="/feed/<%= hashed_id %><%= paramsToArgs(params: params) %>"><button>Access Raw Feed</button></a>
 
         <ol id="pipe_feedlist">
-        <% feed.items.each do |item| %>
+        <% feed.channel.items.each do |item| %>
             <li class="pipe_feeditem"><section>
                 <header><h2><a href="<%= item.url&.to_s %>"><%= item.title&.to_s %></a></h2>
                 <% if item.updated %>

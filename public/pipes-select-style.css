@@ -1,0 +1,23 @@
+* {
+    cursor: pointer !important;
+}
+
+.pipes-select-highlight {
+    border: 2px solid red !important; 
+}
+
+.pipes-select-target {
+    background: red !important;
+}
+
+.pipes-select-blocked {
+    background: grey !important;
+}
+
+.pipes-select-selected {
+    background: yellow !important;
+}
+
+.pipes-select-selected.pipes-select-target {
+    background: orange !important;
+}

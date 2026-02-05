@@ -3,6 +3,8 @@ require "./user.rb"
 require "./downloader.rb"
 require "./pipe.rb"
 require "./block.rb"
+require "./water.rb"
+require "./rssboxblock.rb"
 require "./blocks/feedblock.rb"
 require "./blocks/filterblock.rb"
 require "./blocks/duplicateblock.rb"
@@ -22,21 +24,34 @@ require "./blocks/mergeblock.rb"
 require "./blocks/insertblock.rb"
 require "./blocks/foreachblock.rb"
 require "./blocks/imagesblock.rb"
+require "./blocks/shortenblock.rb"
+require "./blocks/periscopeblock.rb"
+require "./blocks/mixcloudblock.rb"
+require "./blocks/svtplayblock.rb"
+require "./blocks/ustreamblock.rb"
+require "./blocks/speedrunblock.rb"
+require "./blocks/soundcloudblock.rb"
+require "./blocks/dailymotionblock.rb"
+require "./blocks/vimeoblock.rb"
+require "./blocks/twitchblock.rb"
+require "./blocks/redditblock.rb"
+require "./blocks/tabletojsonblock.rb"
+require "./blocks/filterlangblock.rb"
 require 'hashids'
 require 'logutils'
 require 'digest/md5'
-require 'thread/pool'
 require "sinatra/json"
+require "securerandom"
+require "dalli"
+require "base64"
 
-pool = Thread.pool(1)
+register Sinatra::BrowserID
+
+# Disabling origin-check is needed to make webkit-browsers like Chrome work. 
+# Behind a proxy you will also need to disable :remote_token, regardless for which browser.
+set :protection, except: [:http_origin, :remote_token] 
+
 set :browserid_button_class, "pure-button pure-button-primary"
-
-# Configuration constants
-HASHIDS_SECRET = ENV['PIPES_HASHIDS_SECRET'] || 'asdqwrwqr34pipes'
-HASHIDS_PIPE_SECRET = ENV['PIPES_HASHIDS_PIPE_SECRET'] || 'pipedypipe'
-CACHE_CLEANUP_INTERVAL = 3605  # seconds
-CACHE_TTL = 600  # seconds (10 minutes)
-WEBHOOK_CLEANUP_INTERVAL = 7200  # seconds (2 hours)
 
 helpers do
 
@@ -49,14 +64,13 @@ helpers do
     end
 
     def encodeid(id)
-        Hashids.new(HASHIDS_SECRET, 8).encode(id)
+        Hashids.new(ENV['PIPES_URL_SECRET'], 8).encode(id)
     end
 
     def gravatar
         begin
             email_address = authorized_email.downcase
-        rescue => e
-            logger.warn "Failed to get authorized email for gravatar: #{e.message}"
+        rescue
             return "https://www.gravatar.com/avatar/0000?d=mm"
         end
         hash = Digest::MD5.hexdigest(email_address)
@@ -66,8 +80,7 @@ helpers do
     def userEmailToId(email)
         begin
             return Database.instance.getUserId(email: email)
-        rescue => e
-            logger.warn "Failed to get user ID for email: #{e.message}"
+        rescue
         end
         return nil
     end
@@ -83,25 +96,31 @@ helpers do
             params.each do |k,v|
                 begin
                     url += CGI.escape(k) + '=' + CGI.escape(v) + "&"
-                rescue => e
-                    logger.warn "Failed to escape parameter #{k}: #{e.message}"
+                rescue
                 end
             end
         end
         return url
     end
+
+    def inlineSvg(svg)
+        return 'data:image/svg+xml;base64,' + Base64.encode64('<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><g transform="scale(0.2)">' + svg + '</g></svg>')
+    end
+
+    # Return true if the rssbox environment variable is set
+    def rssbox?
+        ENV.has_key?('PIPES_RSSBOX')
+    end
+
+    # Return true if the rssbridge environment variable is set
+    def rssbridge?
+        ENV.has_key?('PIPES_RSSBRIDGE')
+    end
 end
 
 configure do
-    # disable remote token for persona behind nginx proxy, http origin for webkit browsers and portier
-    set :protection, except: [:remote_token, :http_origin]
-    pool.process {
-        while true
-            Database.instance.cleanHooks
-            Database.instance.cleanCache
-            sleep CACHE_CLEANUP_INTERVAL
-        end
-    }
+    enable :sessions
+    set :session_secret, ENV.fetch('SESSION_SECRET') { SecureRandom.hex(64) }
 end
 
 LogUtils::Logger.root.level = :warn
@@ -127,22 +146,22 @@ post '/pipe' do
     hashed_id = params[:id]
     hashed_id = nil if params[:id] == 'undefined'
     if hashed_id
-        id = Hashids.new(HASHIDS_SECRET, 8).decode(hashed_id)
+        id = Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id)
     end
     if hashed_id.nil?
         # We restrict the number of maximum pipes according to the users plan
         return 402 if ! User.new(email: authorized_email).hasFreeStorage
     end
-    return Hashids.new(HASHIDS_SECRET, 8).encode(Database.instance.storePipe(id: id, user: authorized_email, pipe: params[:pipe], preview: params[:preview]))
+    return Hashids.new(ENV['PIPES_URL_SECRET'], 8).encode(Database.instance.storePipe(id: id, user: authorized_email, pipe: params[:pipe], preview: params[:preview]))
 end
 
 # endpoint to get a pipe json, or the pipe overview page
 get %r{/pipe/(\w+)} do |hashed_id|
     if request.xhr?
         protected!
-        return Database.instance.getPipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))['pipe']
+        return Database.instance.getPipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))['pipe']
     else
-        pipe = Database.instance.getPipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))
+        pipe = Database.instance.getPipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))
         textinputs = JSON.parse(pipe['pipe'])['blocks'].select{|x| x['type'] == 'TextinputBlock' } || []
         erb :pipe, :locals => {:pipe => pipe, :textinputs => textinputs, :tags => Database.instance.getTags(), :owned => (pipe['user'].to_s == userEmailToId(authorized_email).to_s) }
     end
@@ -150,12 +169,12 @@ end
 
 # endpoint to get a public pipe json
 get %r{/publicpipe/(\w+)} do |hashed_id|
-    Database.instance.getPublicPipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))['pipe']
+    Database.instance.getPublicPipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))['pipe']
 end
 
 get %r{/pipename/(\w+)} do |hashed_id|
     protected!
-    Database.instance.getPipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))['title']
+    Database.instance.getPipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))['title']
 end
 
 get '/mypipes' do
@@ -180,14 +199,14 @@ end
 post %r{/pipetitle/(\w+)} do |hashed_id|
     protected!
     if params[:title]
-        Database.instance.setPipeTitle(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email, title: params[:title])
+        Database.instance.setPipeTitle(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email, title: params[:title])
     end
 end
 
 post %r{/pipedescription/(\w+)} do |hashed_id|
     protected!
     if params[:description]
-        Database.instance.setPipeDescription(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email, description: params[:description])
+        Database.instance.setPipeDescription(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email, description: params[:description])
     end
 end
 
@@ -204,44 +223,86 @@ end
 
 # endpoint to get the pipe output
 get %r{/feed/([\w\.]+)} do |hashed_id|
-    mode = :xml
+    mode = :xml # Default: Assume pipes carry RSS and thus xml
     if hashed_id[-4, 4] == '.txt'
         hashed_id[-4, 4] = ''
         mode = :txt
-    else
-        content_type 'application/rss+xml'
     end
-    pipe = Pipe.new(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), params: params)
     
-    return pipe.run(mode: mode)
+    if hashed_id[-4, 4] == '.xml'
+        hashed_id[-4, 4] = ''
+        mode = :xml
+    end
+
+    if hashed_id[-5, 5] == '.json'
+        hashed_id[-5, 5] = ''
+        mode = :json
+    end
+    
+    pipe = Pipe.new(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), params: params, user: User.new(email: authorized_email))
+    
+    output = pipe.run(mode: mode)
+    if output.kind_of?(Water)
+        output = output.solidify(mode)
+
+        case mode
+            when :txt then content_type 'text/plain'
+            when :xml then content_type 'application/xml'
+            when :json then content_type 'application/json'
+        end
+    else
+        # help feed readers by adding the atom self element, used e.g. for image url replacement
+        output = output.to_s.sub('<channel>', '<channel>' + "\n" + '<atom10:link xmlns:atom10="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="' + 'https://www.pipes.digital/feed/' + pipe.encodedId() + '" />')
+
+        case mode
+            when :txt then content_type 'text/plain'
+            when :xml then content_type 'application/rss+xml'
+            when :json then content_type 'application/json'
+        end
+    end
+
+    return output
 end
 
 # see the pipe output also in non-RSS supporting browsers like recently Firefox
 get %r{/feedpreview/([\w\.]+)} do |hashed_id|
-    pipe = Pipe.new(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), params: params)
-    pipe_output = pipe.run(mode: :xml)
-    feed = FeedParser::Parser.parse(pipe_output)
-    erb :feedpreview, :locals => {:feed => feed, :hashed_id => hashed_id } 
+    pipe = Pipe.new(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), params: params, user: User.new(email: authorized_email))
+    html = 'Timeout!'
+    
+    output = pipe.run(mode: :xml)
+    if (output.kind_of?(Water))
+        html = output.solidify
+        if (output.orig_format == :xml)
+            content_type 'text/xml'
+        else
+            content_type 'application/json'
+        end
+    else
+        html = erb :feedpreview, :locals => {:feed => output, :hashed_id => pipe.encodedId() }
+    end
+    GC.start
+    html
 end
 
 # endpoint to get a block output
-# NOTE: this should be a GET semantically, but that breaks for longer pipes on some servers
+# NOTE: this should be a GET semantically, but that breaks for longer pipes on the prod server (reason unknown)
 post %r{/block/(\w+)} do |block_id|
     protected!
     pipejson = params[:pipe]
-    pipe = Pipe.new(pipe: pipejson, start: block_id)
+    
+    pipe = Pipe.new(pipe: pipejson, start: block_id, user: User.new(email: authorized_email))
     output = pipe.run
     if params[:gallery]
-        pipe = Pipe.new(pipe: pipejson, start: params['input_id'])
+        pipe = Pipe.new(pipe: pipejson, start: params['input_id'], user: User.new(email: authorized_email))
         input = pipe.run    # we might need the input to create absolute urls
-        baseURL = Nokogiri::HTML(input).css("link[rel='canonical']").first&.attr('href')
+        baseURL = Nokogiri::HTML(input.to_s).css("link[rel='canonical']").first&.attr('href')
         if baseURL
             baseURL = URI.parse(baseURL)
             baseURL.query = baseURL.fragment = nil
             baseURL = baseURL.to_s.delete_suffix('/')
         end
         
-        feed = Nokogiri::XML(output)
+        feed = Nokogiri::XML(output.to_s)
         images = feed.xpath('//item/content:encoded')
         images = images.map do |x|
             doc = Nokogiri::HTML(x.content)
@@ -263,7 +324,14 @@ post %r{/block/(\w+)} do |block_id|
         end
         output = erb :gallery, :locals => {:images => images}
     end
-    return output
+    if output.respond_to?(:data)
+        # This is a pipe with Water in it, meaning we can return the data as well as the json paths
+        # used for autocomplete
+        content_type :json
+        return json({ data: output.data, paths: output.outline })
+    end
+    # If we are here, this is a pipe without Water, so the output is an RSS object
+    return output.to_s
 end
 
 get '/settings' do
@@ -292,42 +360,42 @@ end
 
 post %r{/sharePipe/(\w+)} do |hashed_id|
     protected!
-    Database.instance.sharePipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email)
+    Database.instance.sharePipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email)
 end
 
 post %r{/unsharePipe/(\w+)} do |hashed_id|
     protected!
-    Database.instance.unsharePipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email)
+    Database.instance.unsharePipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email)
 end
 
 post %r{/deletePipe/(\w+)} do |hashed_id|
     protected!
-    Database.instance.deletePipe(id: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), user: authorized_email)
+    Database.instance.deletePipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email)
 end
 
 post %r{/copyPipe/(\w+)} do |hashed_id|
     protected!
-    Hashids.new(HASHIDS_SECRET, 8).encode(Database.instance.copyPipe(id: Hashids.new(HASHIDS_SECRET, 8).decode(hashed_id), user: authorized_email))
+    Hashids.new(ENV['PIPES_URL_SECRET'], 8).encode(Database.instance.copyPipe(id: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), user: authorized_email))
 end
 
 post %r{/like/(\w+)} do |hashed_id|
     protected!
-    Database.instance.likePipe(user: authorized_email, pipe: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))
+    Database.instance.likePipe(user: authorized_email, pipe: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))
 end
 
 post %r{/unlike/(\w+)} do |hashed_id|
     protected!
-    Database.instance.unlikePipe(user: authorized_email, pipe: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id))
+    Database.instance.unlikePipe(user: authorized_email, pipe: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id))
 end
 
 post %r{/addTag/(\w+)} do |hashed_id|
     protected!
-    Database.instance.addTag(user: authorized_email, pipe: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), :tag => params[:tag])
+    Database.instance.addTag(user: authorized_email, pipe: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), :tag => params[:tag])
 end
 
 post %r{/removeTag/(\w+)} do |hashed_id|
     protected!
-    Database.instance.removeTag(user: authorized_email, pipe: Hashids.new("asdqwrwqr34pipes", 8).decode(hashed_id), :tag => params[:tag])
+    Database.instance.removeTag(user: authorized_email, pipe: Hashids.new(ENV['PIPES_URL_SECRET'], 8).decode(hashed_id), :tag => params[:tag])
 end
 
 post '/mailchange' do
@@ -350,7 +418,17 @@ get '/export' do
     User.new(email: authorized_email).export()
 end
 
+post '/deleteAccount' do
+    protected!
+    if params['confirm'] == "I am sure"
+        User.new(email: authorized_email).deleteUser!
+    end
+    logout!
+end
 
+get '/goodbye' do
+    erb :goodbye
+end
 
 # webhook endpoint for the webhook block in pipes. General requirements:
 #  1. Store only for something like 1 hour
