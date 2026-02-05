@@ -38,4 +38,42 @@ class TestReplaceBlock < Test::Unit::TestCase
         assert_match(/<description>Second<\/description>/, replaceblock.process([test_feed]).to_s)
     end
 
+    # Work with &#0; in title
+    def test_replace_works_with_malformed_title
+        replaceblock = Replaceblock.new
+        replaceblock.options = {:userinputs => ['/Bad title.*/i', 'New title', 'title']}
+
+        test_feed = Class.new do
+            def run
+                RSS::Parser.parse('<?xml version="1.0" encoding="UTF-8" ?>
+            <rss version="2.0">
+            <channel>
+              <title>Example</title>
+              <link>https://example.com/</link>
+              <description>Example feed</description>
+              <item>
+                <title>Bad title &#0;&#0;&#0;&#0;&#0;</title>
+                <link>https://example.com/8325262</link>
+                <description>An item with a bad title</description>
+              </item>
+              <item>
+                <title>Good title</title>
+                <link>https://example.com/4325262</link>
+                <description>An item with a good title</description>
+              </item>
+            </channel>
+            </rss>')
+            end
+        end
+        test_feed = test_feed.new
+        
+        replaceblock.inputs << test_feed
+        output = replaceblock.run.to_s
+
+        
+        assert_no_match(/<title>Bad title<\/title>/, output)
+        assert_match(/<title>Good title<\/title>/, output)
+        assert_match(/<title>New title<\/title>/, output)
+    end
+
 end
