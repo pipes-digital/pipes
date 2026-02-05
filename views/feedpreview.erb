@@ -62,7 +62,7 @@
                 </header>
                 <div>
                     <div>
-                        <%= item.summary&.to_s %>
+                        <%= h item.summary&.to_s %>
                     </div>
                     <div>
                         <%= h item.content&.to_s if item.content&.gsub(/\s+/, "")&.to_s != item.summary&.gsub(/\s+/, "")&.to_s %>
