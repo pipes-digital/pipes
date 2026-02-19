@@ -175,13 +175,6 @@ label {
     font-size: 100%;
 }
 
-.pure-form input[type] {
-    border: 2px solid #ddd;
-    box-shadow: none;
-    font-size: 100%;
-    width: 100%;
-    margin-bottom: 1em;
-}
 
 /*
  * -- PURE BUTTON STYLES --
