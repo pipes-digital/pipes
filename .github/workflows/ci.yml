@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: niden/actions-memcached@v7
+      - uses: niden/actions-memcached@v8
       - uses: actions/checkout@v6
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
