@@ -2681,7 +2681,7 @@ window.onload = function() {
             // element has position fixed)
             target.style.webkitTransform =
             target.style.transform =
-              'translate(' + (x - 150) + 'px, ' + (y - document.querySelector('#blocks').scrollTop)  + 'px)';
+              'translate(' + (x - 0) + 'px, ' + (y - document.querySelector('#blocks').scrollTop)  + 'px)';
 
             // update the posiion attributes
             target.setAttribute('data-x', x);
