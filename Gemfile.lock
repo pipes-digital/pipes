@@ -57,7 +57,7 @@ GEM
       concurrent-ruby (~> 1.0)
     iniparser (1.0.1)
     janeway-jsonpath (0.6.0)
-    json (2.18.0)
+    json (2.19.2)
     jsonpath (1.1.5)
       multi_json
     jwt (3.1.2)
